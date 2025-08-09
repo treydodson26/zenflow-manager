@@ -12,7 +12,7 @@ const Index = () => {
   useEffect(() => {
     document.title = "Yoga Studio Dashboard | Talo";
     const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute("content", "Track students, occupancy, revenue, and retention in your yoga studio dashboard.");
+    if (metaDesc) metaDesc.setAttribute("content", "Track customers, occupancy, revenue, and retention in your yoga studio dashboard.");
 
     // Basic JSON-LD for local business (yoga studio)
     const script = document.createElement("script");
@@ -44,7 +44,7 @@ const Index = () => {
       </section>
 
       <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Active Students" value="123" subtitle={"+5 this month"} />
+        <StatCard title="Active Customers" value="123" subtitle={"+5 this month"} />
         <StatCard title="Class Occupancy" value="72 %" subtitle={"filled this week"} />
         <StatCard title="Revenue" value="$8,250" subtitle={"↗︎ healthy growth"} />
         <StatCard title="Retention Rate" value="84 %" />
