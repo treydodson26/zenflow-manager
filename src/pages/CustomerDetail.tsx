@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight, AlertTriangle } from "lucide-react";
@@ -202,7 +204,7 @@ export default function CustomerDetail() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-1">
-                  <h1 className="text-xl font-semibold leading-tight">Customer: {fullName}</h1>
+                  <h1 className="text-xl font-semibold leading-tight">{fullName}</h1>
                   <div className="flex flex-wrap items-center gap-2">
                     {journeyBadge}
                     <Tooltip>
@@ -223,6 +225,24 @@ export default function CustomerDetail() {
                     <ArrowLeft className="mr-2" /> Back to all customers
                   </Button>
                 </Link>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline">Contact</Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-64">
+                    <div className="space-y-2 text-sm">
+                      <div className="font-medium">Contact</div>
+                      <div className="flex items-center justify-between">
+                        <span>Email</span>
+                        <a className="text-primary" href={`mailto:${customer.email}`}>{customer.email}</a>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Phone</span>
+                        <a className="text-primary" href={`tel:${customer.phone}`}>{customer.phone}</a>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 <Button onClick={onSendMessage}>
                   <Mail className="mr-2" /> Send Message
                 </Button>
@@ -232,20 +252,6 @@ export default function CustomerDetail() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <Metric label="Total Classes" value={String(customer.total_classes)} />
-              <Metric label="Total Spent" value={formatCurrency(customer.total_lifetime_value)} />
-              <Metric label="Member Since" value={formatDateShort(customer.member_since)} />
-              <Metric label="Last Visit" value={timeSince(customer.last_seen)} />
-              <Metric label="Email" value={customer.email} />
-              <Metric label="Phone" value={customer.phone} />
-            </div>
-
-            {customer.notes && (
-              <CardDescription className="pt-1">
-                <span className="font-medium">Notes:</span> {customer.notes}
-              </CardDescription>
-            )}
           </CardHeader>
         </Card>
 
@@ -265,117 +271,179 @@ export default function CustomerDetail() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Main Column */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Journey Overview */}
-            <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-              <CardHeader>
-                <CardTitle>Journey Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <Tile title="Current Stage" subtitle={
-                    customer.status === "intro"
-                      ? `Intro Day ${customer.current_day} of ${customer.total_days}`
-                      : customer.status === "member"
-                      ? "Active Member"
-                      : customer.status === "drop-in"
-                      ? "Drop‑in"
-                      : "Prospect"
-                  } icon={<Calendar />} />
+          <div className="lg:col-span-2">
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="classes">Classes</TabsTrigger>
+                <TabsTrigger value="purchases">Purchases</TabsTrigger>
+                <TabsTrigger value="details">Details</TabsTrigger>
+              </TabsList>
 
-                  <Tile title="Classes this month" subtitle={`${customer.journey.classes_this_month}`} icon={<Calendar />} />
+              <TabsContent value="overview" className="space-y-6">
+                <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
+                  <CardHeader>
+                    <CardTitle>Journey Overview</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <Tile title="Current Stage" subtitle={
+                        customer.status === "intro"
+                          ? `Intro Day ${customer.current_day} of ${customer.total_days}`
+                          : customer.status === "member"
+                          ? "Active Member"
+                          : customer.status === "drop-in"
+                          ? "Drop‑in"
+                          : "Prospect"
+                      } icon={<Calendar />} />
 
-                  <Tile title="Next class" subtitle={customer.journey.next_class ? `${customer.journey.next_class.title} • ${formatDateShort(customer.journey.next_class.date)}` : "—"} icon={<Calendar />} />
+                      <Tile title="Classes this month" subtitle={`${customer.journey.classes_this_month}`} icon={<Calendar />} />
 
-                  <Tile title="Conversion score" subtitle={`${customer.journey.conversion_score}%`} icon={<Star />} />
-                </div>
-              </CardContent>
-            </Card>
+                      <Tile title="Next class" subtitle={customer.journey.next_class ? `${customer.journey.next_class.title} • ${formatDateShort(customer.journey.next_class.date)}` : "—"} icon={<Calendar />} />
 
-            {/* Communication Timeline */}
-            <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-              <CardHeader>
-                <CardTitle>Communication Timeline</CardTitle>
-                <CardDescription>Most recent first</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {customer.communications.length === 0 && (
-                    <div className="text-sm text-muted-foreground">No communications yet – consider sending a welcome message.</div>
-                  )}
-                  {customer.communications.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
-                      <div className="flex items-center gap-3">
-                        {c.type === "email" ? <Mail /> : <MessageCircle />}
-                        <div>
-                          <div className="font-medium">{c.subject}</div>
-                          <div className="text-xs text-muted-foreground">{formatDateShort(c.at)}</div>
+                      <Tile title="Conversion score" subtitle={`${customer.journey.conversion_score}%`} icon={<Star />} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="timeline">
+                <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
+                  <CardHeader>
+                    <CardTitle>Communication Timeline</CardTitle>
+                    <CardDescription>Most recent first</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {customer.communications.length === 0 && (
+                        <div className="text-sm text-muted-foreground">No communications yet – consider sending a welcome message.</div>
+                      )}
+                      {customer.communications.map((c) => (
+                        <div key={c.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
+                          <div className="flex items-center gap-3">
+                            {c.type === "email" ? <Mail /> : <MessageCircle />}
+                            <div>
+                              <div className="font-medium">{c.subject}</div>
+                              <div className="text-xs text-muted-foreground">{formatDateShort(c.at)}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={c.status === "replied" ? "secondary" : c.status === "opened" ? "default" : "outline"}>{c.status}</Badge>
+                            {c.status === "scheduled" && (
+                              <Button size="sm" variant="outline" onClick={() => toast({ title: "Message scheduled", description: "This message will send automatically." })}>
+                                View <ChevronRight className="ml-1" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="classes">
+                <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
+                  <CardHeader>
+                    <CardTitle>Class History</CardTitle>
+                    <CardDescription>Recent activity</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {customer.classes.length === 0 ? (
+                      <div className="text-sm text-muted-foreground">No classes attended yet – Send welcome message.</div>
+                    ) : (
+                      <div className="w-full overflow-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Class</TableHead>
+                              <TableHead>Instructor</TableHead>
+                              <TableHead className="text-right">Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {customer.classes.map((k) => (
+                              <TableRow key={k.id}>
+                                <TableCell>{formatDateShort(k.date)}</TableCell>
+                                <TableCell>{k.title}</TableCell>
+                                <TableCell>{k.instructor}</TableCell>
+                                <TableCell className="text-right">
+                                  <Badge variant={k.status === "attended" ? "secondary" : k.status === "cancelled" ? "outline" : "destructive"}>{k.status}</Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={c.status === "replied" ? "secondary" : c.status === "opened" ? "default" : "outline"}>{c.status}</Badge>
-                        {c.status === "scheduled" && (
-                          <Button size="sm" variant="outline" onClick={() => toast({ title: "Message scheduled", description: "This message will send automatically." })}>
-                            View <ChevronRight className="ml-1" />
-                          </Button>
-                        )}
+                    )}
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <Tile title="Favorites" subtitle={`${favoriteTitle} • ${favoriteTime}`} />
+                      <Tile title="No‑shows" subtitle={`${noShowCount}`} />
+                      <Tile title="Cancellations" subtitle={`${cancelledCount}`} />
+                    </div>
+                    <div className="mt-3">
+                      <Button variant="link">View Full History</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="purchases">
+                <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
+                  <CardHeader>
+                    <CardTitle>Purchases</CardTitle>
+                    <CardDescription>History & upgrades</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-1 text-sm">
+                      {customer.membership.purchases.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between">
+                          <span>{p.item}</span>
+                          <span className="text-muted-foreground">{formatDateShort(p.date)} • {formatCurrency(p.price)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="pt-2">
+                      <div className="text-sm font-medium mb-1">Upgrade opportunities</div>
+                      <div className="flex flex-wrap gap-2">
+                        {customer.membership.upgrade_suggestions.map((u) => (
+                          <Badge key={u} variant="outline">{u}</Badge>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-            {/* Class History */}
-            <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-              <CardHeader>
-                <CardTitle>Class History</CardTitle>
-                <CardDescription>Recent activity</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {customer.classes.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No classes attended yet – Send welcome message.</div>
-                ) : (
-                  <div className="w-full overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Class</TableHead>
-                          <TableHead>Instructor</TableHead>
-                          <TableHead className="text-right">Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {customer.classes.map((k) => (
-                          <TableRow key={k.id}>
-                            <TableCell>{formatDateShort(k.date)}</TableCell>
-                            <TableCell>{k.title}</TableCell>
-                            <TableCell>{k.instructor}</TableCell>
-                            <TableCell className="text-right">
-                              <Badge variant={k.status === "attended" ? "secondary" : k.status === "cancelled" ? "outline" : "destructive"}>{k.status}</Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <Tile title="Favorites" subtitle={`${favoriteTitle} • ${favoriteTime}`} />
-                  <Tile title="No‑shows" subtitle={`${noShowCount}`} />
-                  <Tile title="Cancellations" subtitle={`${cancelledCount}`} />
-                </div>
-                <div className="mt-3">
-                  <Button variant="link">View Full History</Button>
-                </div>
-              </CardContent>
-            </Card>
+              <TabsContent value="details">
+                <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
+                  <CardHeader>
+                    <CardTitle>Profile & Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                      <Metric label="Total Classes" value={String(customer.total_classes)} />
+                      <Metric label="Total Spent" value={formatCurrency(customer.total_lifetime_value)} />
+                      <Metric label="Member Since" value={formatDateShort(customer.member_since)} />
+                      <Metric label="Last Visit" value={timeSince(customer.last_seen)} />
+                      <Metric label="Email" value={customer.email} />
+                      <Metric label="Phone" value={customer.phone} />
+                    </div>
+                    {customer.notes && (
+                      <CardDescription className="pt-1">
+                        <span className="font-medium">Notes:</span> {customer.notes}
+                      </CardDescription>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Sidebar */}
-          <aside className="space-y-6">
+          <aside className="space-y-6 lg:sticky lg:top-20">
             <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
