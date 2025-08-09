@@ -1,6 +1,8 @@
 import { MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { MessageCircle, MoreVertical } from "lucide-react";
+import { MessageCircle, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export interface GalleryCustomer {
   id: string;
@@ -31,10 +33,11 @@ export default function CustomerCard({ customer, onMessage, onMore }: Props) {
   };
   const engagement = getEngagement(customer.daysSinceLastVisit);
   const progress = Math.min(100, Math.max(0, (customer.currentDay / 30) * 100));
+  const needsAttention = customer.daysSinceLastVisit > 14 || (customer.status === "intro" && customer.currentDay >= 25) || customer.status === "inactive";
 
   const handleCardClick = () => navigate(`/customer/${customer.id}`);
   const handleMsg = (e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onMessage?.(customer.id); };
-  const handleMore = (e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onMore?.(customer.id); };
+  const handleView = (e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate(`/customer/${customer.id}`); };
 
   return (
     <div
@@ -48,7 +51,7 @@ export default function CustomerCard({ customer, onMessage, onMore }: Props) {
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative">
             {customer.photo ? (
-              <img src={customer.photo} alt={customer.name} className="w-12 h-12 rounded-full object-cover" />
+              <img src={customer.photo} alt={`Profile photo of ${customer.name}`} className="w-12 h-12 rounded-full object-cover" />
             ) : (
               <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
                 <span className="font-semibold text-sm">
@@ -63,19 +66,24 @@ export default function CustomerCard({ customer, onMessage, onMore }: Props) {
             <p className="text-xs text-muted-foreground truncate">{customer.email}</p>
           </div>
         </div>
-        <span
-          className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-            customer.status === "intro"
-              ? "bg-primary/10 text-primary"
-              : customer.status === "member"
-              ? "bg-[hsl(var(--ring))]/10 text-[hsl(var(--ring))]"
-              : customer.status === "drop-in"
-              ? "bg-[hsl(var(--accent))]/10 text-[hsl(var(--accent))]"
-              : "bg-muted text-muted-foreground"
-          }`}
-        >
-          {customer.status === "intro" ? `Day ${customer.currentDay}` : customer.statusLabel}
-        </span>
+        <div className="flex items-center">
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+              customer.status === "intro"
+                ? "bg-primary/10 text-primary"
+                : customer.status === "member"
+                ? "bg-[hsl(var(--ring))]/10 text-[hsl(var(--ring))]"
+                : customer.status === "drop-in"
+                ? "bg-[hsl(var(--accent))]/10 text-[hsl(var(--accent))]"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {customer.status === "intro" ? `Day ${customer.currentDay}` : customer.statusLabel}
+          </span>
+          {needsAttention && (
+            <Badge variant="destructive" className="ml-2">Needs attention</Badge>
+          )}
+        </div>
       </div>
 
       {customer.status === "intro" && (
@@ -92,10 +100,10 @@ export default function CustomerCard({ customer, onMessage, onMore }: Props) {
 
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <p className="text-2xl font-bold">{customer.classesThisWeek}</p>
+          <p className="text-xl font-semibold">{customer.classesThisWeek}</p>
           <p className="text-xs text-muted-foreground">Classes this week</p>
         </div>
-        <div className="text-right">
+        <div className="text-right pl-4 border-l border-border/60">
           <p className="text-sm font-medium">
             {customer.daysSinceLastVisit === 0
               ? "Today"
@@ -121,19 +129,14 @@ export default function CustomerCard({ customer, onMessage, onMore }: Props) {
       )}
 
       <div className="flex gap-2">
-        <button
-          onClick={handleMsg}
-          className="flex-1 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
-        >
+        <Button onClick={handleMsg} className="flex-1">
           <MessageCircle className="w-4 h-4" />
           Message
-        </button>
-        <button
-          onClick={handleMore}
-          className="px-3 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-secondary/80 transition-colors"
-        >
-          <MoreVertical className="w-4 h-4" />
-        </button>
+        </Button>
+        <Button onClick={handleView} variant="outline">
+          <Eye className="w-4 h-4" />
+          View
+        </Button>
       </div>
     </div>
   );

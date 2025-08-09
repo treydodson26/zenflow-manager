@@ -72,14 +72,14 @@ export default function CustomersGallery() {
       </header>
 
       {/* Filter Bar */}
-      <div className="bg-card rounded-lg p-4 shadow-sm border mb-6 animate-fade-in">
-        <div className="flex items-center gap-4 flex-wrap lg:flex-nowrap">
+      <div className="bg-card rounded-lg p-5 md:p-6 shadow-sm border mb-6 animate-fade-in">
+        <div className="flex items-center gap-5 flex-wrap lg:flex-nowrap">
           <div className="relative flex-1 min-w-[260px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search by name or email..."
-              className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background"
+              className="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               aria-label="Search customers"
@@ -90,7 +90,7 @@ export default function CustomersGallery() {
             <button onClick={() => setFilter("all")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === "all" ? "bg-primary text-primary-foreground" : "bg-background border text-muted-foreground hover:bg-muted/40"}`}>All Students ({counts.all})</button>
             <button onClick={() => setFilter("intro")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === "intro" ? "bg-primary text-primary-foreground" : "bg-background border text-muted-foreground hover:bg-muted/40"}`}>Intro Offers ({counts.intro})</button>
             <button onClick={() => setFilter("active")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === "active" ? "bg-primary text-primary-foreground" : "bg-background border text-muted-foreground hover:bg-muted/40"}`}>Active Members ({counts.active})</button>
-            <button onClick={() => setFilter("attention")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all relative ${filter === "attention" ? "bg-primary text-primary-foreground" : "bg-background border text-muted-foreground hover:bg-muted/40"}`}>
+            <button onClick={() => setFilter("attention")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all relative ${filter === "attention" ? "bg-destructive text-destructive-foreground shadow-sm" : "bg-background border border-destructive/40 text-destructive hover:bg-destructive/10"}`}>
               Need Attention ({counts.attention})
               {counts.attention > 0 && (
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full"></span>
