@@ -52,7 +52,7 @@ export default function CustomerAIChat({ customer }: Props) {
     setIsSending(true);
 
     try {
-      const fn = tab === "ask" ? "ai-ask" : tab === "draft" ? "ai-draft" : "enrich-customer";
+      const fn = tab === "ask" ? "ai-ask" : tab === "draft" ? "ai-draft" : "research-customer";
       const { data, error } = await supabase.functions.invoke(fn, {
         body: { input: text, customer, tab },
       });
