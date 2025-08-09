@@ -1,1 +1,15 @@
 project_id = "mvndgpmetndvjsmvhqqh"
+
+# ... keep existing code (existing function settings)
+
+[functions.ai-ask]
+verify_jwt = false
+
+[functions.ai-draft]
+verify_jwt = false
+
+[functions.enrich-customer]
+verify_jwt = false
+
+[functions.send-whatsapp]
+verify_jwt = false

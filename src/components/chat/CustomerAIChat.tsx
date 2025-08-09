@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bot, Send, Sparkles, Search } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
 interface CustomerLite {
   first_name?: string;
@@ -21,6 +23,7 @@ export default function CustomerAIChat({ customer }: Props) {
   const [tab, setTab] = useState<"ask" | "draft" | "research">("ask");
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [isSending, setIsSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   const fullName = useMemo(() => {
@@ -39,25 +42,30 @@ export default function CustomerAIChat({ customer }: Props) {
     return "Find 3 relevant wellness topics to mention in outreach.";
   }, [tab]);
 
-  const send = () => {
-    if (!input.trim()) return;
-    const userMsg = { role: "user" as const, content: input.trim() };
+  const send = async () => {
+    const text = input.trim();
+    if (!text) return;
+
+    const userMsg = { role: "user" as const, content: text };
     setMessages((m) => [...m, userMsg]);
     setInput("");
+    setIsSending(true);
 
-    // Preview-mode assistant response until API keys/functions are added
-    const preview =
-      tab === "ask"
-        ? `Preview: I’d analyze attendance, engagement, and stage to answer your question about ${fullName}.`
-        : tab === "draft"
-        ? `Preview: Here’s a personalized draft for ${fullName}. Connect API keys to generate real drafts.`
-        : `Preview: I’d research public info and provide bullet talking points about ${fullName}.`;
+    try {
+      const fn = tab === "ask" ? "ai-ask" : tab === "draft" ? "ai-draft" : "enrich-customer";
+      const { data, error } = await supabase.functions.invoke(fn, {
+        body: { input: text, customer, tab },
+      });
+      if (error) throw error;
 
-    const assistantMsg = { role: "assistant" as const, content: preview };
-    setTimeout(() => setMessages((m) => [...m, assistantMsg]), 300);
-
-    // Later: call Supabase edge functions for real results
-    // supabase.functions.invoke('ai-analyze', { body: { tab, input, customer }})
+      const assistantMsg = { role: "assistant" as const, content: data?.text || "No response." };
+      setMessages((m) => [...m, assistantMsg]);
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "AI error", description: e?.message || "Something went wrong.", variant: "destructive" as any });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -113,12 +121,12 @@ export default function CustomerAIChat({ customer }: Props) {
                   {tab === "research" && <Search className="h-4 w-4" />} {tab === "research" && "External research"}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" type="button" onClick={() => setInput(example)}>
+                  <Button variant="ghost" type="button" onClick={() => setInput(example)} disabled={isSending}>
                     Use example
                   </Button>
-                  <Button onClick={send}>
+                  <Button onClick={send} disabled={isSending || !input.trim()}>
                     <Send />
-                    Send
+                    {isSending ? "Sending..." : "Send"}
                   </Button>
                 </div>
               </div>
