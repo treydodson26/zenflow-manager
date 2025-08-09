@@ -13,3 +13,6 @@ verify_jwt = false
 
 [functions.send-whatsapp]
 verify_jwt = false
+
+[functions.ai-sdk]
+verify_jwt = false
