@@ -37,7 +37,7 @@ const Index = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-8">
       <section>
         <h1 className="text-3xl font-semibold tracking-tight">Welcome back, Emily</h1>
         <p className="text-muted-foreground mt-1">Here’s what’s happening in your studio today.</p>
@@ -50,7 +50,7 @@ const Index = () => {
         <StatCard title="Retention Rate" value="84 %" />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2 space-y-8">
           <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
             <CardHeader>
