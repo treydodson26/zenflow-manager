@@ -58,10 +58,8 @@ Interests/Tags: ${(customer?.engagement_metrics?.tags || []).join(", ") || "-"}`
         max_output_tokens: 900,
         tools: [{ type: "web_search" }],
         tool_choice: "auto",
-        input: [
-          { role: "system", content: [{ type: "text", text: system }] },
-          { role: "user", content: [{ type: "text", text: personContext + "\n\nUser question: " + userQuery }] },
-        ],
+        instructions: system,
+        input: `${personContext}\n\nUser question: ${userQuery}\n\nReturn sections: Summary, Key Facts, Recent Mentions, Potential Talking Points, Sources.`,
       }),
     });
 
