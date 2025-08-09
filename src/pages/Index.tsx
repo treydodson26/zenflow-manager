@@ -37,21 +37,21 @@ const Index = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <section>
         <h1 className="text-3xl font-semibold tracking-tight">Welcome back, Emily</h1>
         <p className="text-muted-foreground mt-1">Here’s what’s happening in your studio today.</p>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard title="Active Students" value="123" subtitle={"+5 this month"} />
         <StatCard title="Class Occupancy" value="72 %" subtitle={"filled this week"} />
         <StatCard title="Revenue" value="$8,250" subtitle={"↗︎ healthy growth"} />
         <StatCard title="Retention Rate" value="84 %" />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
           <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
             <CardHeader>
               <CardTitle>Ask Talo anything</CardTitle>
@@ -67,7 +67,7 @@ const Index = () => {
           </Card>
         </div>
 
-        <aside className="space-y-6">
+        <aside className="space-y-8">
           <Card>
             <CardHeader>
               <CardTitle>Upcoming Classes</CardTitle>

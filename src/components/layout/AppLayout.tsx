@@ -17,7 +17,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
   return (
     <SidebarProvider>
-      <header className="h-14 flex items-center border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="h-16 flex items-center border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex items-center justify-between">
           <div className="flex items-center gap-3">
             <SidebarTrigger />
@@ -29,7 +29,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <main className="flex-1 container py-6">{children}</main>
+        <main className="flex-1 container py-8">{children}</main>
       </div>
     </SidebarProvider>
   );
