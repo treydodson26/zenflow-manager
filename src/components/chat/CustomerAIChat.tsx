@@ -24,8 +24,8 @@ export default function CustomerAIChat({ customer }: Props) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
-
   const fullName = useMemo(() => {
     return [customer?.first_name, customer?.last_name].filter(Boolean).join(" ") || "this customer";
   }, [customer?.first_name, customer?.last_name]);
@@ -68,6 +68,25 @@ export default function CustomerAIChat({ customer }: Props) {
     }
   };
 
+  const testSdk = async () => {
+    const prompt = (input || `Say hi to ${fullName} from ai-sdk`).trim();
+    try {
+      setIsTesting(true);
+      const { data, error } = await supabase.functions.invoke('ai-sdk', {
+        body: { prompt },
+      });
+      if (error) throw error;
+      const text = data?.text || 'No response.';
+      setMessages((m) => [...m, { role: 'assistant', content: text }]);
+      toast({ title: 'ai-sdk', description: 'Response received.' });
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: 'AI SDK error', description: e?.message || 'Something went wrong.', variant: 'destructive' as any });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   return (
     <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
       <CardHeader>
@@ -76,6 +95,10 @@ export default function CustomerAIChat({ customer }: Props) {
             <Bot className="opacity-80" />
             <CardTitle>AI Assistant</CardTitle>
           </div>
+          <Button variant="outline" size="sm" onClick={testSdk} disabled={isTesting} aria-label="Test Anthropic SDK">
+            <Sparkles className="h-4 w-4" />
+            {isTesting ? "Testing..." : "Test SDK"}
+          </Button>
         </div>
         <CardDescription>
           Ask questions about data, draft messages, or research context. This preview runs locally; connect API keys to enable live AI.
