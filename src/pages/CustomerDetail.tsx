@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
-import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight, AlertTriangle } from "lucide-react";
 
 // Mock data until real data is wired
 const MOCK = {
@@ -101,6 +102,31 @@ export default function CustomerDetail() {
   const customer = useCustomerMock(id);
 
   const fullName = `${customer.first_name} ${customer.last_name}`;
+
+  const daysRemaining = useMemo(() => {
+    const exp = customer.membership?.expires ? new Date(customer.membership.expires).getTime() : 0;
+    return Math.max(0, Math.ceil((exp - Date.now()) / (1000 * 60 * 60 * 24)));
+  }, [customer.membership?.expires]);
+
+  const noShowCount = useMemo(() => customer.classes.filter((k) => k.status === "no‑show").length, [customer.classes]);
+  const cancelledCount = useMemo(() => customer.classes.filter((k) => k.status === "cancelled").length, [customer.classes]);
+  const favoriteTitle = useMemo(() => {
+    const freq: Record<string, number> = {};
+    customer.classes.filter((k) => k.status === "attended").forEach((k) => {
+      freq[k.title] = (freq[k.title] || 0) + 1;
+    });
+    return Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
+  }, [customer.classes]);
+  const favoriteTime = useMemo(() => {
+    const buckets = { Morning: 0, Afternoon: 0, Evening: 0 } as Record<string, number>;
+    customer.classes.filter((k) => k.status === "attended").forEach((k) => {
+      const h = new Date(k.date).getHours();
+      if (h < 12 && h >= 5) buckets.Morning++;
+      else if (h < 17) buckets.Afternoon++;
+      else buckets.Evening++;
+    });
+    return Object.entries(buckets).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
+  }, [customer.classes]);
 
   // SEO: title, meta description, canonical, JSON‑LD (Person)
   useEffect(() => {
@@ -223,6 +249,21 @@ export default function CustomerDetail() {
           </CardHeader>
         </Card>
 
+        {daysRemaining <= 3 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Intro offer expiring in {daysRemaining} days</AlertTitle>
+            <AlertDescription>Send a conversion offer to encourage membership.</AlertDescription>
+          </Alert>
+        )}
+
+        {customer.classes.length === 0 && (
+          <Alert>
+            <AlertTitle>No classes attended yet</AlertTitle>
+            <AlertDescription>Send a welcome message to help them get started.</AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Main Column */}
           <div className="lg:col-span-2 space-y-6">
@@ -321,6 +362,11 @@ export default function CustomerDetail() {
                     </Table>
                   </div>
                 )}
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Tile title="Favorites" subtitle={`${favoriteTitle} • ${favoriteTime}`} />
+                  <Tile title="No‑shows" subtitle={`${noShowCount}`} />
+                  <Tile title="Cancellations" subtitle={`${cancelledCount}`} />
+                </div>
                 <div className="mt-3">
                   <Button variant="link">View Full History</Button>
                 </div>
