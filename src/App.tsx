@@ -8,7 +8,6 @@ import NotFound from "./pages/NotFound";
 import AppLayout from "@/components/layout/AppLayout";
 import CustomerDetail from "./pages/CustomerDetail";
 import Customers from "./pages/Customers";
-import Students from "./pages/Students";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -21,7 +20,6 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/customers" element={<Customers />} />
-            <Route path="/students" element={<Students />} />
             <Route path="/customer/:id" element={<CustomerDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
