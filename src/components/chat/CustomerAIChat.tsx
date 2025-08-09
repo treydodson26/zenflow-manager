@@ -69,19 +69,19 @@ export default function CustomerAIChat({ customer }: Props) {
   };
 
   const testSdk = async () => {
-    const prompt = (input || `Say hi to ${fullName} from ai-sdk`).trim();
+    const prompt = (input || `Say hi to ${fullName}`).trim();
     try {
       setIsTesting(true);
-      const { data, error } = await supabase.functions.invoke('ai-sdk', {
+      const { data, error } = await supabase.functions.invoke('generate-text', {
         body: { prompt },
       });
       if (error) throw error;
       const text = data?.text || 'No response.';
       setMessages((m) => [...m, { role: 'assistant', content: text }]);
-      toast({ title: 'ai-sdk', description: 'Response received.' });
+      toast({ title: 'Ask AI', description: 'Response received.' });
     } catch (e: any) {
       console.error(e);
-      toast({ title: 'AI SDK error', description: e?.message || 'Something went wrong.', variant: 'destructive' as any });
+      toast({ title: 'Ask AI error', description: e?.message || 'Something went wrong.', variant: 'destructive' as any });
     } finally {
       setIsTesting(false);
     }
@@ -95,9 +95,9 @@ export default function CustomerAIChat({ customer }: Props) {
             <Bot className="opacity-80" />
             <CardTitle>AI Assistant</CardTitle>
           </div>
-          <Button variant="outline" size="sm" onClick={testSdk} disabled={isTesting} aria-label="Test Anthropic SDK">
+          <Button variant="outline" size="sm" onClick={testSdk} disabled={isTesting} aria-label="Ask AI (generate-text)">
             <Sparkles className="h-4 w-4" />
-            {isTesting ? "Testing..." : "Test SDK"}
+            {isTesting ? "Thinking..." : "Ask AI"}
           </Button>
         </div>
         <CardDescription>
