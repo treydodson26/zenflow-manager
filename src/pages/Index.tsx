@@ -51,20 +51,22 @@ const Index = () => {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-            <CardHeader>
-              <CardTitle>Ask Talo anything</CardTitle>
-              <p className="text-sm text-muted-foreground">Ask about attendance, revenue, instructor performance, or scheduling.</p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="rounded-md bg-muted p-4 text-sm text-muted-foreground">Sure, our retention rate currently stands at 34%. You can see the figure displayed in the widget above.</div>
-              <div className="flex gap-2">
-                <Input placeholder="Ask Talo anything..." value={query} onChange={(e) => setQuery(e.target.value)} />
-                <Button onClick={handleAsk}>Send</Button>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="lg:col-span-2 flex flex-col gap-8 min-h-[70vh]">
+          <div className="mt-auto sticky bottom-4">
+            <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
+              <CardHeader>
+                <CardTitle>Ask Talo anything</CardTitle>
+                <p className="text-sm text-muted-foreground">Ask about attendance, revenue, instructor performance, or scheduling.</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="rounded-md bg-muted p-4 text-sm text-muted-foreground">Sure, our retention rate currently stands at 34%. You can see the figure displayed in the widget above.</div>
+                <div className="flex gap-2">
+                  <Input placeholder="Ask Talo anything..." value={query} onChange={(e) => setQuery(e.target.value)} />
+                  <Button onClick={handleAsk}>Send</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         <aside className="space-y-8">
