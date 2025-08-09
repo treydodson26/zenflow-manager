@@ -1,13 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { toast } from "@/hooks/use-toast";
 import { StatCard } from "@/components/dashboard/StatCard";
-
+import AgentFred from "@/components/AgentFred";
 const Index = () => {
-  const [query, setQuery] = useState("");
 
   useEffect(() => {
     document.title = "Yoga Studio Dashboard | Talo";
@@ -30,12 +26,6 @@ const Index = () => {
 
   const month = useMemo(() => new Date(), []);
 
-  const handleAsk = () => {
-    if (!query.trim()) return;
-    toast({ title: "Talo AI", description: "Here's a sample response. Connect to Supabase/AI later." });
-    setQuery("");
-  };
-
   return (
     <div className="space-y-6 lg:space-y-8">
       <section>
@@ -53,19 +43,7 @@ const Index = () => {
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2 flex flex-col gap-8 min-h-[70vh]">
           <div className="mt-auto sticky bottom-4">
-            <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-              <CardHeader>
-                <CardTitle>Ask Talo anything</CardTitle>
-                <p className="text-sm text-muted-foreground">Ask about attendance, revenue, instructor performance, or scheduling.</p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="rounded-md bg-muted p-4 text-sm text-muted-foreground">Sure, our retention rate currently stands at 34%. You can see the figure displayed in the widget above.</div>
-                <div className="flex gap-2">
-                  <Input placeholder="Ask Talo anything..." value={query} onChange={(e) => setQuery(e.target.value)} />
-                  <Button onClick={handleAsk}>Send</Button>
-                </div>
-              </CardContent>
-            </Card>
+            <AgentFred className="border-none bg-[--card] shadow-[var(--shadow-elegant)]" />
           </div>
         </div>
 
