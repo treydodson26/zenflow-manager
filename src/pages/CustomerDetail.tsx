@@ -11,6 +11,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight, AlertTriangle } from "lucide-react";
+import CustomerAIChat from "@/components/chat/CustomerAIChat";
 
 // Mock data until real data is wired
 const MOCK = {
@@ -272,6 +273,9 @@ export default function CustomerDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           <div className="lg:col-span-2">
+            <div className="mb-6">
+              <CustomerAIChat customer={customer} />
+            </div>
             <Tabs defaultValue="overview" className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
