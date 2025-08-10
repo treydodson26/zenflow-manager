@@ -9,6 +9,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import CustomerDetail from "./pages/CustomerDetail";
 import Customers from "./pages/Customers";
 import ImportArketa from "./pages/ImportArketa";
+import Leads from "./pages/Leads";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -22,6 +23,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/import" element={<ImportArketa />} />
+            <Route path="/leads" element={<Leads />} />
             
             <Route path="/customer/:id" element={<CustomerDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
