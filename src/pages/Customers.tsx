@@ -89,11 +89,11 @@ export default function CustomersGallery() {
         <p className="text-muted-foreground">{totalStudents} students on their wellness journey with you</p>
       </header>
 
-      <Tabs defaultValue="prospects" className="space-y-6">
+      <Tabs defaultValue="intro" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="prospects">Prospects</TabsTrigger>
-          <TabsTrigger value="dropins">Drop-Ins</TabsTrigger>
           <TabsTrigger value="intro">Intro Offer</TabsTrigger>
+          <TabsTrigger value="dropins">Drop-Ins</TabsTrigger>
+          <TabsTrigger value="prospects">Prospects</TabsTrigger>
         </TabsList>
 
         <TabsContent value="prospects">
