@@ -296,15 +296,6 @@ export default function CustomerDetail() {
               <CustomerAIChat customer={customer} />
             </div>
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="timeline">Communication Log</TabsTrigger>
-                <TabsTrigger value="classes">Classes</TabsTrigger>
-                <TabsTrigger value="purchases">Package History</TabsTrigger>
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="notes">Notes</TabsTrigger>
-                <TabsTrigger value="waitlists">Waitlists</TabsTrigger>
-              </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
                 <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
