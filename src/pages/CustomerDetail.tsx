@@ -196,12 +196,11 @@ export default function CustomerDetail() {
     const stage = customer.status;
     if (stage === "intro") {
       const d = customer.current_day;
-      const cls = d >= 28 ? "bg-destructive/15 text-destructive" : d >= 21 ? "bg-amber-500/15 text-amber-600" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
-      return <Badge className={cls}>Intro Day {d} of {customer.total_days}</Badge>;
+      return <Badge className="bg-primary-foreground/15 text-primary-foreground border border-primary-foreground/20">Intro Day {d} of {customer.total_days}</Badge>;
     }
-    if (stage === "member") return <Badge variant="secondary">Active Member</Badge>;
-    if (stage === "drop-in") return <Badge variant="outline">Drop‑in</Badge>;
-    return <Badge variant="outline">Prospect</Badge>;
+    if (stage === "member") return <Badge className="bg-primary-foreground/15 text-primary-foreground border border-primary-foreground/20">Active Member</Badge>;
+    if (stage === "drop-in") return <Badge className="bg-primary-foreground/15 text-primary-foreground border border-primary-foreground/20">Drop‑in</Badge>;
+    return <Badge className="bg-primary-foreground/15 text-primary-foreground border border-primary-foreground/20">Prospect</Badge>;
   }, [customer]);
 
   const onSendMessage = () => {
@@ -227,7 +226,7 @@ export default function CustomerDetail() {
               </div>
 
               <div className="flex items-start gap-4">
-                <Avatar className="h-16 w-16">
+                <Avatar className="h-16 w-16 bg-primary-foreground/15 text-primary-foreground ring-1 ring-primary-foreground/25">
                   <AvatarFallback aria-label={`${fullName} avatar`}>
                     {customer.first_name[0]}
                     {customer.last_name[0]}
