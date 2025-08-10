@@ -217,7 +217,7 @@ export default function CustomerDetail() {
         {/* Header */}
         <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
           <CardHeader className="flex flex-col gap-4">
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-start gap-4">
               <div className="flex items-start gap-4">
                 <Avatar className="h-14 w-14">
                   <AvatarFallback aria-label={`${fullName} avatar`}>
@@ -250,43 +250,6 @@ export default function CustomerDetail() {
                     </a>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap justify-end">
-                <Button className="bg-primary text-primary-foreground" onClick={() => toast({ title: "Converted to Member", description: `${fullName} marked as member (mock)` })}>
-                  Convert to Member
-                </Button>
-                <Button variant="secondary" onClick={() => toast({ title: "Intro extended", description: "Extended by 7 days (mock)" })}>Extend Intro Offer</Button>
-                <Button variant="outline" onClick={() => toast({ title: "Private session added", description: "Added to schedule (mock)" })}>Add Private Session</Button>
-
-                <Link to="/customers" className="hidden sm:block">
-                  <Button variant="outline">
-                    <ArrowLeft className="mr-2" /> Back to all customers
-                  </Button>
-                </Link>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline">Contact</Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-64">
-                    <div className="space-y-2 text-sm">
-                      <div className="font-medium">Contact</div>
-                      <div className="flex items-center justify-between">
-                        <span>Email</span>
-                        <a className="text-primary" href={`mailto:${customer.email}`}>{customer.email}</a>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Phone</span>
-                        <a className="text-primary" href={`tel:${customer.phone}`}>{customer.phone}</a>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-                <Button onClick={onSendMessage}>
-                  <Mail className="mr-2" /> Send Message
-                </Button>
-                <Button variant="secondary" onClick={onAddNote}>
-                  <Star className="mr-2" /> Add Note
-                </Button>
               </div>
             </div>
 
