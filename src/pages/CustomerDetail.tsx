@@ -11,7 +11,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight, AlertTriangle, Send, Users, Tag, Edit3 } from "lucide-react";
 import CustomerAIChat from "@/components/chat/CustomerAIChat";
 
 // Mock data until real data is wired
@@ -30,6 +30,13 @@ const MOCK = {
   member_since: "2024-05-02T00:00:00.000Z",
   last_seen: "2025-08-01T15:20:00.000Z",
   notes: "Loves morning vinyasa. Mild wrist sensitivity – offer modifications.",
+  first_class_date: "2024-07-15T09:00:00.000Z",
+  preferred_instructor: "Mia",
+  source: "Instagram",
+  home_studio: "Palo Alto",
+  emergency_contact: "Taylor Carter • +1 (555) 098‑7654",
+  injuries: "None listed",
+  birthday: "1993-08-25T00:00:00.000Z",
   journey: {
     classes_this_month: 4,
     next_class: {
@@ -56,6 +63,7 @@ const MOCK = {
       { id: "p1", item: "Intro Offer", date: "2025-07-30T00:00:00.000Z", price: 49 },
     ],
     upgrade_suggestions: ["Monthly Unlimited", "10‑Class Pack"],
+    classes_remaining: { used: 2, total: 5 },
   },
   engagement_metrics: {
     classes_per_week: 2.0,
@@ -230,6 +238,16 @@ export default function CustomerDetail() {
                       </TooltipTrigger>
                       <TooltipContent>High = likely to convert/retain</TooltipContent>
                     </Tooltip>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <a href={`mailto:${customer.email}`} aria-label={`Email ${fullName}`} className="inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-xs">
+                      <Mail className="h-3 w-3" />
+                      <span>{customer.email}</span>
+                    </a>
+                    <a href={`tel:${customer.phone}`} aria-label={`Call ${fullName}`} className="inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-xs">
+                      <Phone className="h-3 w-3" />
+                      <span>{customer.phone}</span>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -444,7 +462,7 @@ export default function CustomerDetail() {
                       <div className="text-sm font-medium mb-1">Upgrade opportunities</div>
                       <div className="flex flex-wrap gap-2">
                         {customer.membership.upgrade_suggestions.map((u) => (
-                          <Badge key={u} variant="outline">{u}</Badge>
+                          <Badge key={u} variant="outline">{u === "10‑Class Pack" ? "Monthly Unlimited" : u}</Badge>
                         ))}
                       </div>
                     </div>
@@ -484,17 +502,17 @@ export default function CustomerDetail() {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full" onClick={() => toast({ title: "Day 14 conversion offer sent", description: "Offer template queued." })}>
-                  Send Day 14 Conversion Offer
+                <Button className="w-full" aria-label="Send Day 14 Conversion Offer" onClick={() => toast({ title: "Day 14 conversion offer sent", description: "Offer template queued." })}>
+                  <Send className="mr-2" /> Send Day 14 Conversion Offer
                 </Button>
-                <Button variant="secondary" className="w-full" onClick={() => toast({ title: "WhatsApp check-in queued", description: "Day 14 WhatsApp prepared." })}>
+                <Button variant="secondary" className="w-full" aria-label="Send Day 14 WhatsApp Check-in" onClick={() => toast({ title: "WhatsApp check-in queued", description: "Day 14 WhatsApp prepared." })}>
                   <MessageCircle className="mr-2" /> Send Day 14 WhatsApp Check-in
                 </Button>
-                <Button variant="outline" className="w-full" onClick={() => toast({ title: "Added to Prenatal Community", description: `${fullName} tagged & added.` })}>
-                  Add to Prenatal Community
+                <Button variant="outline" className="w-full" aria-label="Add to Prenatal Community" onClick={() => toast({ title: "Added to Prenatal Community", description: `${fullName} tagged & added.` })}>
+                  <Users className="mr-2" /> Add to Prenatal Community
                 </Button>
-                <Button variant="outline" className="w-full" onClick={() => toast({ title: "Outreach logged", description: "Manual outreach recorded (mock)." })}>
-                  Log Manual Outreach
+                <Button variant="outline" className="w-full" aria-label="Log Manual Outreach" onClick={() => toast({ title: "Outreach logged", description: "Manual outreach recorded (mock)." })}>
+                  <Edit3 className="mr-2" /> Log Manual Outreach
                 </Button>
               </CardContent>
             </Card>
@@ -505,10 +523,39 @@ export default function CustomerDetail() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-muted-foreground">Current package</div>
+                  <div className="text-muted-foreground">Current Status</div>
                   <div className="text-right">{customer.membership.package}</div>
+
                   <div className="text-muted-foreground">Expiration</div>
-                  <div className="text-right">{formatDateShort(customer.membership.expires)}</div>
+                  <div className={`text-right ${daysRemaining <= 3 ? "text-destructive font-medium" : ""}`}>{formatDateShort(customer.membership.expires)}</div>
+
+                  <div className="text-muted-foreground">Classes Remaining</div>
+                  <div className="text-right">
+                    {customer.membership.classes_remaining
+                      ? `${Math.max(0, customer.membership.classes_remaining.total - customer.membership.classes_remaining.used)} of ${customer.membership.classes_remaining.total}`
+                      : "—"}
+                  </div>
+
+                  <div className="text-muted-foreground">First Class Date</div>
+                  <div className="text-right">{formatDateShort(customer.first_class_date)}</div>
+
+                  <div className="text-muted-foreground">Preferred Instructor</div>
+                  <div className="text-right">{customer.preferred_instructor || "—"}</div>
+
+                  <div className="text-muted-foreground">Source</div>
+                  <div className="text-right">{customer.source || "—"}</div>
+
+                  <div className="text-muted-foreground">Home Studio</div>
+                  <div className="text-right">{customer.home_studio || "—"}</div>
+
+                  <div className="text-muted-foreground">Emergency Contact</div>
+                  <div className="text-right">{customer.emergency_contact || "—"}</div>
+
+                  <div className="text-muted-foreground">Injuries/Modifications</div>
+                  <div className="text-right">{customer.injuries || "—"}</div>
+
+                  <div className="text-muted-foreground">Birthday</div>
+                  <div className="text-right">{formatDateShort(customer.birthday)}</div>
                 </div>
                 <div className="pt-2">
                   <div className="text-sm font-medium mb-1">Purchase history</div>
@@ -525,7 +572,7 @@ export default function CustomerDetail() {
                   <div className="text-sm font-medium mb-1">Upgrade opportunities</div>
                   <div className="flex flex-wrap gap-2">
                     {customer.membership.upgrade_suggestions.map((u) => (
-                      <Badge key={u} variant="outline">{u}</Badge>
+                      <Badge key={u} variant="outline">{u === "10‑Class Pack" ? "Monthly Unlimited" : u}</Badge>
                     ))}
                   </div>
                 </div>
@@ -542,11 +589,23 @@ export default function CustomerDetail() {
                   <span className="font-medium">{customer.engagement_metrics.classes_per_week.toFixed(1)}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Response rate</span>
-                  <span className="font-medium">{customer.engagement_metrics.response_rate}%</span>
+                  <span>Show Rate</span>
+                  <span className="font-medium">{showRate}%</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Referrals</span>
+                  <span>Favorite Class Type</span>
+                  <span className="font-medium">{favoriteTitle}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>No‑shows</span>
+                  <span className="font-medium">{noShowCount}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Late cancels</span>
+                  <span className="font-medium">{cancelledCount}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Friends Referred</span>
                   <span className="font-medium">{customer.engagement_metrics.referrals}</span>
                 </div>
                 <div className="pt-1">
