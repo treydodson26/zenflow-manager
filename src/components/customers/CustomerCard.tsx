@@ -2,7 +2,6 @@ import { MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { MessageCircle, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 export interface GalleryCustomer {
   id: string;
@@ -26,14 +25,7 @@ interface Props {
 export default function CustomerCard({ customer, onMessage, onMore }: Props) {
   const navigate = useNavigate();
 
-  const getEngagement = (d: number) => {
-    if (d <= 7) return { dot: "bg-[hsl(var(--primary))]", label: "active" };
-    if (d <= 14) return { dot: "bg-[hsl(var(--accent))]", label: "cooling" };
-    return { dot: "bg-muted", label: "inactive" };
-  };
-  const engagement = getEngagement(customer.daysSinceLastVisit);
   const progress = Math.min(100, Math.max(0, (customer.currentDay / 30) * 100));
-  const needsAttention = customer.daysSinceLastVisit > 14 || (customer.status === "intro" && customer.currentDay >= 25) || customer.status === "inactive";
 
   const handleCardClick = () => navigate(`/customer/${customer.id}`);
   const handleMsg = (e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onMessage?.(customer.id); };
@@ -51,15 +43,14 @@ export default function CustomerCard({ customer, onMessage, onMore }: Props) {
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative">
             {customer.photo ? (
-              <img src={customer.photo} alt={`Profile photo of ${customer.name}`} className="w-12 h-12 rounded-full object-cover" />
+              <img src={customer.photo} alt={`Profile photo of ${customer.name}`} className="w-12 h-12 rounded-full object-cover ring-1 ring-border" />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center ring-1 ring-border">
                 <span className="font-semibold text-sm">
                   {customer.name.split(" ").map((n) => n[0]).join("")}
                 </span>
               </div>
             )}
-            <span className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-card ${engagement.dot}`} />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold truncate">{customer.name}</h3>
@@ -80,9 +71,6 @@ export default function CustomerCard({ customer, onMessage, onMore }: Props) {
           >
             {customer.status === "intro" ? `Day ${customer.currentDay}` : customer.statusLabel}
           </span>
-          {needsAttention && (
-            <Badge variant="destructive" className="ml-2">Needs attention</Badge>
-          )}
         </div>
       </div>
 
@@ -129,13 +117,13 @@ export default function CustomerCard({ customer, onMessage, onMore }: Props) {
       )}
 
       <div className="flex gap-2">
-        <Button onClick={handleMsg} className="flex-1">
+        <Button onClick={handleView} className="flex-1">
+          <Eye className="w-4 h-4" />
+          Open
+        </Button>
+        <Button onClick={handleMsg} variant="outline">
           <MessageCircle className="w-4 h-4" />
           Message
-        </Button>
-        <Button onClick={handleView} variant="outline">
-          <Eye className="w-4 h-4" />
-          View
         </Button>
       </div>
     </div>
