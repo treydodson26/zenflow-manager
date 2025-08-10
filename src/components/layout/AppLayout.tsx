@@ -1,7 +1,9 @@
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Bot } from "lucide-react";
+import AgentFred from "@/components/AgentFred";
 interface AppLayoutProps { children: ReactNode }
 
 export const AppLayout = ({ children }: AppLayoutProps) => {
@@ -14,6 +16,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
       day: "numeric",
     });
   }, []);
+  const [open, setOpen] = useState(false);
 
   return (
     <SidebarProvider>
@@ -28,6 +31,24 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
             <div className="text-sm text-foreground whitespace-nowrap tabular-nums">{today}</div>
           </div>
         </header>
+
+        {/* Floating Fred assistant button */}
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Open Fred assistant"
+          className="fixed top-20 right-6 z-50 inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover-scale"
+        >
+          <Bot className="w-5 h-5" />
+        </button>
+
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Fred — Studio Agent</DialogTitle>
+            </DialogHeader>
+            <AgentFred />
+          </DialogContent>
+        </Dialog>
 
         <main className="flex-1 p-4 lg:p-6">{children}</main>
       </SidebarInset>

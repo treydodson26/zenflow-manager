@@ -1,14 +1,14 @@
 import { useEffect, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import { StatCard } from "@/components/dashboard/StatCard";
-import AgentFred from "@/components/AgentFred";
+import KPITrendCard from "@/components/dashboard/KPITrendCard";
+import StudioCalendar from "@/components/calendar/StudioCalendar";
+import { Card, CardContent } from "@/components/ui/card";
+
 const Index = () => {
 
   useEffect(() => {
     document.title = "Yoga Studio Dashboard | Talo";
     const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute("content", "Track customers, occupancy, revenue, and retention in your yoga studio dashboard.");
+    if (metaDesc) metaDesc.setAttribute("content", "Actionable studio dashboard with KPIs, trends, and interactive schedule.");
 
     // Basic JSON-LD for local business (yoga studio)
     const script = document.createElement("script");
@@ -24,53 +24,40 @@ const Index = () => {
     return () => { document.head.removeChild(script); };
   }, []);
 
-  const month = useMemo(() => new Date(), []);
+  const trends = useMemo(() => ({
+    customers: Array.from({ length: 12 }, (_, i) => ({ x: i, y: 80 + Math.round(Math.random() * 20) })),
+    occupancy: Array.from({ length: 12 }, (_, i) => ({ x: i, y: 60 + Math.round(Math.random() * 30) })),
+    revenue: Array.from({ length: 12 }, (_, i) => ({ x: i, y: 7000 + Math.round(Math.random() * 2000) })),
+    retention: Array.from({ length: 12 }, (_, i) => ({ x: i, y: 75 + Math.round(Math.random() * 15) })),
+  }), []);
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      <section>
+      <section className="animate-fade-in">
         <h1 className="text-3xl font-semibold tracking-tight">Welcome back, Emily</h1>
-        <p className="text-muted-foreground mt-1">Here’s what’s happening in your studio today.</p>
+        <p className="text-muted-foreground mt-1">Here’s the pulse of your studio today.</p>
       </section>
 
+      {/* KPIs with trends and actions */}
       <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Active Customers" value="123" subtitle={"+5 this month"} />
-        <StatCard title="Class Occupancy" value="72 %" subtitle={"filled this week"} />
-        <StatCard title="Revenue" value="$8,250" subtitle={"↗︎ healthy growth"} />
-        <StatCard title="Retention Rate" value="84 %" />
+        <KPITrendCard title="Active Customers" value="123" change="+4%" trend={trends.customers} actionLabel="View Churned Customers" onAction={() => (window.location.href = "/customers")} />
+        <KPITrendCard title="Class Occupancy" value="72%" change="+5%" trend={trends.occupancy} actionLabel="Promote Underfilled Classes" onAction={() => (window.location.href = "/leads")} />
+        <KPITrendCard title="Revenue" value="$8,250" change="+8%" trend={trends.revenue} actionLabel="Send Offer" onAction={() => (window.location.href = "/marketing")} />
+        <KPITrendCard title="Retention Rate" value="84%" change="-1%" trend={trends.retention} actionLabel="Nurture Drop‑offs" onAction={() => (window.location.href = "/segments")} />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-        <div className="lg:col-span-2 flex flex-col gap-8 min-h-[70vh]">
-          <div className="mt-auto sticky bottom-4">
-            <AgentFred className="border-none bg-[--card] shadow-[var(--shadow-elegant)]" />
-          </div>
-        </div>
-
-        <aside className="space-y-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Classes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Calendar mode="single" selected={month} onSelect={() => {}} className="rounded-md border" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Classes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3 text-sm">
-                <li className="flex justify-between"><span>Vinyasa</span><span className="text-muted-foreground">Alice • 6:00 PM</span></li>
-                <li className="flex justify-between"><span>Restorative</span><span className="text-muted-foreground">Michael • 7:30 PM</span></li>
-                <li className="flex justify-between"><span>Hatha</span><span className="text-muted-foreground">Sarah • 9:00 AM</span></li>
-              </ul>
-            </CardContent>
-          </Card>
-        </aside>
+      {/* Combined interactive calendar */}
+      <section>
+        <StudioCalendar />
       </section>
+
+      {/* Footer tip bar */}
+      <Card className="border-dashed">
+        <CardContent className="py-3 text-sm flex items-center justify-between">
+          <span className="text-muted-foreground">Your occupancy is up 5% from last week! Keep momentum by promoting midday classes.</span>
+          <a href="/marketing" className="story-link text-primary">Open Marketing Hub</a>
+        </CardContent>
+      </Card>
     </div>
   );
 };

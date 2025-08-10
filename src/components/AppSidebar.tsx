@@ -12,15 +12,18 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const items = [
+const opsItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Customers", url: "/customers", icon: Users },
-  { title: "CSV Import", url: "/import", icon: Upload },
-  { title: "Marketing Hub", url: "/marketing", icon: Megaphone },
   { title: "Instructor Hub", url: "/instructors", icon: GraduationCap },
-  { title: "Segments", url: "/segments", icon: ListTree },
-  { title: "Lead Management", url: "/leads", icon: Users },
+  { title: "CSV Import", url: "/import", icon: Upload },
   { title: "Settings", url: "/settings", icon: Settings },
+];
+
+const growthItems = [
+  { title: "Lead Management", url: "/leads", icon: Users },
+  { title: "Segments", url: "/segments", icon: ListTree },
+  { title: "Marketing Hub", url: "/marketing", icon: Megaphone },
 ];
 
 export function AppSidebar() {
@@ -44,10 +47,28 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
+          <SidebarGroupLabel>Operations</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {opsItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink to={item.url} end className={getNavCls}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Growth</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {growthItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end className={getNavCls}>
