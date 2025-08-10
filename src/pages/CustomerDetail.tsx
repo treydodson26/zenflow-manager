@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight, AlertTriangle, Send, Users, Tag, Edit3, User } from "lucide-react";
+import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight, AlertTriangle, Send, Users, Tag, Edit3 } from "lucide-react";
 import CustomerAIChat from "@/components/chat/CustomerAIChat";
 
 // Mock data until real data is wired
@@ -21,6 +21,7 @@ const MOCK = {
   last_name: "Carter",
   email: "emily.carter@example.com",
   phone: "+1 555-0123",
+  avatar_url: "https://i.pravatar.cc/128?u=emily.carter@example.com",
   status: "intro", // prospect | drop-in | member
   current_day: 14,
   total_days: 30,
@@ -226,9 +227,11 @@ export default function CustomerDetail() {
               </div>
 
               <div className="flex items-start gap-4">
-                <Avatar className="h-16 w-16 bg-primary-foreground/15 text-primary-foreground ring-1 ring-primary-foreground/25">
-                  <AvatarFallback aria-label={`${fullName} avatar`}>
-                    <User className="h-8 w-8 text-emerald-400" />
+                <Avatar className="h-16 w-16 ring-1 ring-primary-foreground/25 bg-foreground">
+                  <AvatarImage src={customer.avatar_url} alt={`${fullName} avatar`} />
+                  <AvatarFallback className="text-primary-foreground">
+                    {customer.first_name[0]}
+                    {customer.last_name[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-2">
