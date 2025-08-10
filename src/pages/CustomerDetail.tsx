@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight, AlertTriangle } from "lucide-react";
@@ -130,6 +131,14 @@ export default function CustomerDetail() {
     });
     return Object.entries(buckets).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
   }, [customer.classes]);
+  const attendedCount = useMemo(() => customer.classes.filter((k) => k.status === "attended").length, [customer.classes]);
+  const bookedCount = useMemo(() => customer.classes.length, [customer.classes]);
+  const showRate = useMemo(() => (bookedCount ? Math.round((attendedCount / bookedCount) * 100) : 0), [attendedCount, bookedCount]);
+  const lastAttended = useMemo(() => {
+    return customer.classes
+      .filter((k) => k.status === "attended")
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] || null;
+  }, [customer.classes]);
 
   // SEO: title, meta description, canonical, JSON‑LD (Person)
   useEffect(() => {
@@ -177,7 +186,11 @@ export default function CustomerDetail() {
 
   const journeyBadge = useMemo(() => {
     const stage = customer.status;
-    if (stage === "intro") return <Badge>Intro Day {customer.current_day} of {customer.total_days}</Badge>;
+    if (stage === "intro") {
+      const d = customer.current_day;
+      const cls = d >= 28 ? "bg-destructive/15 text-destructive" : d >= 21 ? "bg-amber-500/15 text-amber-600" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
+      return <Badge className={cls}>Intro Day {d} of {customer.total_days}</Badge>;
+    }
     if (stage === "member") return <Badge variant="secondary">Active Member</Badge>;
     if (stage === "drop-in") return <Badge variant="outline">Drop‑in</Badge>;
     return <Badge variant="outline">Prospect</Badge>;
@@ -220,7 +233,13 @@ export default function CustomerDetail() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                <Button className="bg-primary text-primary-foreground" onClick={() => toast({ title: "Converted to Member", description: `${fullName} marked as member (mock)` })}>
+                  Convert to Member
+                </Button>
+                <Button variant="secondary" onClick={() => toast({ title: "Intro extended", description: "Extended by 7 days (mock)" })}>Extend Intro Offer</Button>
+                <Button variant="outline" onClick={() => toast({ title: "Private session added", description: "Added to schedule (mock)" })}>Add Private Session</Button>
+
                 <Link to="/customers" className="hidden sm:block">
                   <Button variant="outline">
                     <ArrowLeft className="mr-2" /> Back to all customers
@@ -279,10 +298,12 @@ export default function CustomerDetail() {
             <Tabs defaultValue="overview" className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="timeline">Communication Log</TabsTrigger>
                 <TabsTrigger value="classes">Classes</TabsTrigger>
-                <TabsTrigger value="purchases">Purchases</TabsTrigger>
+                <TabsTrigger value="purchases">Package History</TabsTrigger>
                 <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="notes">Notes</TabsTrigger>
+                <TabsTrigger value="waitlists">Waitlists</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
@@ -304,9 +325,28 @@ export default function CustomerDetail() {
 
                       <Tile title="Classes this month" subtitle={`${customer.journey.classes_this_month}`} icon={<Calendar />} />
 
-                      <Tile title="Next class" subtitle={customer.journey.next_class ? `${customer.journey.next_class.title} • ${formatDateShort(customer.journey.next_class.date)}` : "—"} icon={<Calendar />} />
+                      <Tile title="Next Booked Class" subtitle={customer.journey.next_class ? `${customer.journey.next_class.title} • ${formatDateShort(customer.journey.next_class.date)}` : "—"} icon={<Calendar />} />
 
-                      <Tile title="Conversion score" subtitle={`${customer.journey.conversion_score}%`} icon={<Star />} />
+                      <Tile title="Membership Likelihood" subtitle={`${customer.journey.conversion_score}%`} icon={<Star />} />
+                    </div>
+
+                    {/* Progress + milestones */}
+                    {customer.status === "intro" && (
+                      <div className="mt-4 space-y-2">
+                        <div className="text-xs text-muted-foreground">Progress • {customer.current_day} of {customer.total_days} days</div>
+                        <Progress value={(customer.current_day / customer.total_days) * 100} />
+                        <div className="text-xs flex flex-wrap gap-3 pt-1">
+                          <span className="text-emerald-600">Day 7 ✓</span>
+                          <span className="text-emerald-600">Day 10 ✓</span>
+                          <span className="font-medium text-emerald-700">Day 14 (TODAY)</span>
+                          <span className="text-muted-foreground">Day 28</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Last attended */}
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <Tile title="Last Attended" subtitle={lastAttended ? `${lastAttended.title} • ${formatDateShort(lastAttended.date)}` : "—"} />
                     </div>
                   </CardContent>
                 </Card>
@@ -315,7 +355,7 @@ export default function CustomerDetail() {
               <TabsContent value="timeline">
                 <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
                   <CardHeader>
-                    <CardTitle>Communication Timeline</CardTitle>
+                    <CardTitle>Communication Log</CardTitle>
                     <CardDescription>Most recent first</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -453,17 +493,17 @@ export default function CustomerDetail() {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full" onClick={() => toast({ title: `Day ${customer.current_day} message sent`, description: "Template applied and queued." })}>
-                  Send Day {customer.current_day} Message
+                <Button className="w-full" onClick={() => toast({ title: "Day 14 conversion offer sent", description: "Offer template queued." })}>
+                  Send Day 14 Conversion Offer
                 </Button>
-                <Button variant="secondary" className="w-full" onClick={() => toast({ title: "WhatsApp composed", description: "Opening WhatsApp composer (mock)." })}>
-                  <MessageCircle className="mr-2" /> Send Custom WhatsApp
+                <Button variant="secondary" className="w-full" onClick={() => toast({ title: "WhatsApp check-in queued", description: "Day 14 WhatsApp prepared." })}>
+                  <MessageCircle className="mr-2" /> Send Day 14 WhatsApp Check-in
                 </Button>
-                <Button variant="outline" className="w-full" onClick={() => toast({ title: "Email composed", description: "Opening email composer (mock)." })}>
-                  <Mail className="mr-2" /> Send Custom Email
+                <Button variant="outline" className="w-full" onClick={() => toast({ title: "Added to Prenatal Community", description: `${fullName} tagged & added.` })}>
+                  Add to Prenatal Community
                 </Button>
-                <Button variant="outline" className="w-full" onClick={() => toast({ title: "Call scheduled", description: "We’ll remind you 10 minutes before (mock)." })}>
-                  <Phone className="mr-2" /> Schedule Call
+                <Button variant="outline" className="w-full" onClick={() => toast({ title: "Outreach logged", description: "Manual outreach recorded (mock)." })}>
+                  Log Manual Outreach
                 </Button>
               </CardContent>
             </Card>

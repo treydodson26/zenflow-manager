@@ -37,10 +37,10 @@ export default function CustomerAIChat({ customer }: Props) {
   }, [tab, fullName]);
 
   const example = useMemo(() => {
-    if (tab === "ask") return "Summarize their journey and top class preference.";
+    if (tab === "ask") return `Ask about ${fullName}'s class preferences, injury modifications, or generate a personalized retention message`;
     if (tab === "draft") return "Write a friendly message to convert them to Monthly Unlimited.";
     return "Find 3 relevant wellness topics to mention in outreach.";
-  }, [tab]);
+  }, [tab, fullName]);
 
   const send = async () => {
     const text = input.trim();
