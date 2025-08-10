@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Leaf, LayoutDashboard, Users, Megaphone, GraduationCap, ListTree, Settings } from "lucide-react";
+import { Leaf, LayoutDashboard, Users, Megaphone, GraduationCap, ListTree, Settings, Upload } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +15,7 @@ import {
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Customers", url: "/customers", icon: Users },
+  { title: "CSV Import", url: "/import", icon: Upload },
   { title: "Marketing Hub", url: "/marketing", icon: Megaphone },
   { title: "Instructor Hub", url: "/instructors", icon: GraduationCap },
   { title: "Segments", url: "/segments", icon: ListTree },

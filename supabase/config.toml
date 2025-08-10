@@ -26,3 +26,6 @@ verify_jwt = false
 [functions.research-customer]
 verify_jwt = false
 
+[functions.csv-import]
+verify_jwt = false
+
