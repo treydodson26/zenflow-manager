@@ -11,7 +11,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight, AlertTriangle, Send, Users, Tag, Edit3 } from "lucide-react";
+import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight, AlertTriangle, Send, Users, Tag, Edit3, User } from "lucide-react";
 import CustomerAIChat from "@/components/chat/CustomerAIChat";
 
 // Mock data until real data is wired
@@ -228,8 +228,7 @@ export default function CustomerDetail() {
               <div className="flex items-start gap-4">
                 <Avatar className="h-16 w-16 bg-primary-foreground/15 text-primary-foreground ring-1 ring-primary-foreground/25">
                   <AvatarFallback aria-label={`${fullName} avatar`}>
-                    {customer.first_name[0]}
-                    {customer.last_name[0]}
+                    <User className="h-8 w-8 text-emerald-400" />
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-2">
