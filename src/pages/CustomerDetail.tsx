@@ -313,53 +313,8 @@ export default function CustomerDetail() {
             <div className="mb-6">
               <CustomerAIChat customer={customer} />
             </div>
-            <Tabs defaultValue="overview" className="w-full">
+            <Tabs defaultValue="classes" className="w-full">
 
-              <TabsContent value="overview" className="space-y-6">
-                <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-                  <CardHeader>
-                    <CardTitle>Journey Overview</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <Tile title="Current Stage" subtitle={
-                        customer.status === "intro"
-                          ? `Intro Day ${customer.current_day} of ${customer.total_days}`
-                          : customer.status === "member"
-                          ? "Active Member"
-                          : customer.status === "drop-in"
-                          ? "Drop‑in"
-                          : "Prospect"
-                      } icon={<Calendar />} />
-
-                      <Tile title="Classes this month" subtitle={`${customer.journey.classes_this_month}`} icon={<Calendar />} />
-
-                      <Tile title="Next Booked Class" subtitle={customer.journey.next_class ? `${customer.journey.next_class.title} • ${formatDateShort(customer.journey.next_class.date)}` : "—"} icon={<Calendar />} />
-
-                      <Tile title="Membership Likelihood" subtitle={`${customer.journey.conversion_score}%`} icon={<Star />} />
-                    </div>
-
-                    {/* Progress + milestones */}
-                    {customer.status === "intro" && (
-                      <div className="mt-4 space-y-2">
-                        <div className="text-xs text-muted-foreground">Progress • {customer.current_day} of {customer.total_days} days</div>
-                        <Progress value={(customer.current_day / customer.total_days) * 100} />
-                        <div className="text-xs flex flex-wrap gap-3 pt-1">
-                          <span className="text-emerald-600">Day 7 ✓</span>
-                          <span className="text-emerald-600">Day 10 ✓</span>
-                          <span className="font-medium text-emerald-700">Day 14 (TODAY)</span>
-                          <span className="text-muted-foreground">Day 28</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Last attended */}
-                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <Tile title="Last Attended" subtitle={lastAttended ? `${lastAttended.title} • ${formatDateShort(lastAttended.date)}` : "—"} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
 
               <TabsContent value="timeline">
                 <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
@@ -579,45 +534,6 @@ export default function CustomerDetail() {
               </CardContent>
             </Card>
 
-            <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-              <CardHeader>
-                <CardTitle>Engagement Metrics</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span>Classes / week</span>
-                  <span className="font-medium">{customer.engagement_metrics.classes_per_week.toFixed(1)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Show Rate</span>
-                  <span className="font-medium">{showRate}%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Favorite Class Type</span>
-                  <span className="font-medium">{favoriteTitle}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>No‑shows</span>
-                  <span className="font-medium">{noShowCount}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Late cancels</span>
-                  <span className="font-medium">{cancelledCount}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Friends Referred</span>
-                  <span className="font-medium">{customer.engagement_metrics.referrals}</span>
-                </div>
-                <div className="pt-1">
-                  <div className="text-sm text-muted-foreground mb-1">Community tags</div>
-                  <div className="flex flex-wrap gap-2">
-                    {customer.engagement_metrics.tags.map((t) => (
-                      <Badge key={t} variant="secondary">{t}</Badge>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </aside>
         </div>
       </div>
