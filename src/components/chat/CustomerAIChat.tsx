@@ -112,7 +112,7 @@ export default function CustomerAIChat({ customer }: Props) {
             <TabsTrigger value="research">Research</TabsTrigger>
           </TabsList>
 
-          <div className="mx-auto max-w-3xl">
+          <div className="w-full">
             <ScrollArea className="h-[280px] rounded-md border p-3">
               <div ref={listRef} className="space-y-3">
                 {messages.length === 0 ? (
