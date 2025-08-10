@@ -62,6 +62,22 @@ export default function CustomersGallery() {
 
   const totalStudents = MOCK.length;
 
+  const prospects = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const list = MOCK.filter((s) => s.status === "inactive" || (s as any).status === "prospect");
+    if (!term) return list;
+    return list.filter((s) => [s.name, s.email].some((v) => v.toLowerCase().includes(term)));
+  }, [searchTerm]);
+
+  const dropins = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const list = MOCK.filter((s) => s.status === "drop-in");
+    if (!term) return list;
+    return list.filter((s) => [s.name, s.email].some((v) => v.toLowerCase().includes(term)));
+  }, [searchTerm]);
+
+  const clearSearch = () => setSearchTerm("");
+
   const handleMessage = (id: string) => { /* TODO: open message modal */ };
   const handleMoreOptions = (id: string) => { /* TODO: open dropdown */ };
 
@@ -73,14 +89,15 @@ export default function CustomersGallery() {
         <p className="text-muted-foreground">{totalStudents} students on their wellness journey with you</p>
       </header>
 
-      <Tabs defaultValue="all" className="space-y-6">
+      <Tabs defaultValue="prospects" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="all">All Students</TabsTrigger>
-          <TabsTrigger value="intro">Intro Offers</TabsTrigger>
+          <TabsTrigger value="prospects">Prospects</TabsTrigger>
+          <TabsTrigger value="dropins">Drop-Ins</TabsTrigger>
+          <TabsTrigger value="intro">Intro Offer</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all">
-          {/* Filter Bar */}
+        <TabsContent value="prospects">
+          {/* Search Bar */}
           <div className="bg-card rounded-lg p-5 md:p-6 shadow-sm border mb-6 animate-fade-in">
             <div className="flex items-center gap-5 flex-wrap lg:flex-nowrap">
               <div className="relative flex-1 min-w-[260px]">
@@ -91,24 +108,11 @@ export default function CustomersGallery() {
                   className="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  aria-label="Search customers"
+                  aria-label="Search prospects"
                 />
               </div>
-
-              <div className="flex gap-2 flex-wrap">
-                <button onClick={() => setFilter("all")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === "all" ? "bg-primary text-primary-foreground" : "bg-background border text-muted-foreground hover:bg-muted/40"}`}>All Students ({counts.all})</button>
-                <button onClick={() => setFilter("intro")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === "intro" ? "bg-primary text-primary-foreground" : "bg-background border text-muted-foreground hover:bg-muted/40"}`}>Intro Offers ({counts.intro})</button>
-                <button onClick={() => setFilter("active")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === "active" ? "bg-primary text-primary-foreground" : "bg-background border text-muted-foreground hover:bg-muted/40"}`}>Active Members ({counts.active})</button>
-                <button onClick={() => setFilter("attention")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all relative ${filter === "attention" ? "bg-destructive text-destructive-foreground shadow-sm" : "bg-background border border-destructive/40 text-destructive hover:bg-destructive/10"}`}>
-                  Need Attention ({counts.attention})
-                  {counts.attention > 0 && (
-                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full"></span>
-                  )}
-                </button>
-              </div>
-
-              {(searchTerm || filter !== "all") && (
-                <button onClick={clearFilters} className="text-sm text-foreground/70 hover:text-foreground font-medium flex items-center gap-1">
+              {searchTerm && (
+                <button onClick={clearSearch} className="text-sm text-foreground/70 hover:text-foreground font-medium flex items-center gap-1">
                   <X className="w-4 h-4" />
                   Clear
                 </button>
@@ -118,23 +122,71 @@ export default function CustomersGallery() {
 
           {/* Grid */}
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filtered.map((s) => (
+            {prospects.map((s) => (
               <CustomerCard key={s.id} customer={s} onMessage={handleMessage} onMore={handleMoreOptions} />
             ))}
           </section>
 
           {/* Empty state */}
-          {filtered.length === 0 && (
+          {prospects.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
               <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
                 <UsersIcon className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-lg font-medium text-foreground mb-2">No customers found</h3>
+              <h3 className="text-lg font-medium text-foreground mb-2">No prospects found</h3>
               <p className="text-sm text-muted-foreground text-center max-w-sm">
-                {searchTerm ? `No customers match "${searchTerm}"` : "Try adjusting your filters to see more customers"}
+                {searchTerm ? `No prospects match "${searchTerm}"` : "Try a different search"}
               </p>
-              <button onClick={clearFilters} className="mt-4 px-4 py-2 text-sm text-primary hover:underline">
-                Clear all filters
+              <button onClick={clearSearch} className="mt-4 px-4 py-2 text-sm text-primary hover:underline">
+                Clear search
+              </button>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="dropins">
+          {/* Search Bar */}
+          <div className="bg-card rounded-lg p-5 md:p-6 shadow-sm border mb-6 animate-fade-in">
+            <div className="flex items-center gap-5 flex-wrap lg:flex-nowrap">
+              <div className="relative flex-1 min-w-[260px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  className="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  aria-label="Search drop-ins"
+                />
+              </div>
+              {searchTerm && (
+                <button onClick={clearSearch} className="text-sm text-foreground/70 hover:text-foreground font-medium flex items-center gap-1">
+                  <X className="w-4 h-4" />
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Grid */}
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {dropins.map((s) => (
+              <CustomerCard key={s.id} customer={s} onMessage={handleMessage} onMore={handleMoreOptions} />
+            ))}
+          </section>
+
+          {/* Empty state */}
+          {dropins.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
+              <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
+                <UsersIcon className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground mb-2">No drop-ins found</h3>
+              <p className="text-sm text-muted-foreground text-center max-w-sm">
+                {searchTerm ? `No drop-ins match "${searchTerm}"` : "Try a different search"}
+              </p>
+              <button onClick={clearSearch} className="mt-4 px-4 py-2 text-sm text-primary hover:underline">
+                Clear search
               </button>
             </div>
           )}
