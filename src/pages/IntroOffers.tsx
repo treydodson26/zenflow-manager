@@ -209,9 +209,10 @@ function StageCard({ config, customers }: { config: StageConfig; customers: Intr
   );
 }
 
-export default function IntroOffers() {
-  // SEO
+export default function IntroOffers({ embedded = false }: { embedded?: boolean }) {
+  // SEO (skip when embedded in a tab)
   useEffect(() => {
+    if (embedded) return;
     document.title = "Intro Offers – Nurture Sequence | Talo Yoga";
     ensureMeta("description", "Track intro offer customers across Day 0, 7, 10, 14, and 28 with templates and quick-send actions.");
 
@@ -222,7 +223,7 @@ export default function IntroOffers() {
       document.head.appendChild(link);
     }
     link.href = window.location.origin + "/intro-offers";
-  }, []);
+  }, [embedded]);
 
   const data = useMemo(() => MOCK_CUSTOMERS, []);
 

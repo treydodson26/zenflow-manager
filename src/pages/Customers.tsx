@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search, X, Users as UsersIcon } from "lucide-react";
 import CustomerCard, { GalleryCustomer } from "@/components/customers/CustomerCard";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import IntroOffers from "./IntroOffers";
 
 function ensureMeta(name: string, content: string) {
   let el = document.querySelector(`meta[name="${name}"]`);
@@ -71,64 +73,77 @@ export default function CustomersGallery() {
         <p className="text-muted-foreground">{totalStudents} students on their wellness journey with you</p>
       </header>
 
-      {/* Filter Bar */}
-      <div className="bg-card rounded-lg p-5 md:p-6 shadow-sm border mb-6 animate-fade-in">
-        <div className="flex items-center gap-5 flex-wrap lg:flex-nowrap">
-          <div className="relative flex-1 min-w-[260px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search by name or email..."
-              className="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              aria-label="Search customers"
-            />
-          </div>
+      <Tabs defaultValue="all" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="all">All Students</TabsTrigger>
+          <TabsTrigger value="intro">Intro Offers</TabsTrigger>
+        </TabsList>
 
-          <div className="flex gap-2 flex-wrap">
-            <button onClick={() => setFilter("all")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === "all" ? "bg-primary text-primary-foreground" : "bg-background border text-muted-foreground hover:bg-muted/40"}`}>All Students ({counts.all})</button>
-            <button onClick={() => setFilter("intro")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === "intro" ? "bg-primary text-primary-foreground" : "bg-background border text-muted-foreground hover:bg-muted/40"}`}>Intro Offers ({counts.intro})</button>
-            <button onClick={() => setFilter("active")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === "active" ? "bg-primary text-primary-foreground" : "bg-background border text-muted-foreground hover:bg-muted/40"}`}>Active Members ({counts.active})</button>
-            <button onClick={() => setFilter("attention")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all relative ${filter === "attention" ? "bg-destructive text-destructive-foreground shadow-sm" : "bg-background border border-destructive/40 text-destructive hover:bg-destructive/10"}`}>
-              Need Attention ({counts.attention})
-              {counts.attention > 0 && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full"></span>
+        <TabsContent value="all">
+          {/* Filter Bar */}
+          <div className="bg-card rounded-lg p-5 md:p-6 shadow-sm border mb-6 animate-fade-in">
+            <div className="flex items-center gap-5 flex-wrap lg:flex-nowrap">
+              <div className="relative flex-1 min-w-[260px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  className="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  aria-label="Search customers"
+                />
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                <button onClick={() => setFilter("all")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === "all" ? "bg-primary text-primary-foreground" : "bg-background border text-muted-foreground hover:bg-muted/40"}`}>All Students ({counts.all})</button>
+                <button onClick={() => setFilter("intro")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === "intro" ? "bg-primary text-primary-foreground" : "bg-background border text-muted-foreground hover:bg-muted/40"}`}>Intro Offers ({counts.intro})</button>
+                <button onClick={() => setFilter("active")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === "active" ? "bg-primary text-primary-foreground" : "bg-background border text-muted-foreground hover:bg-muted/40"}`}>Active Members ({counts.active})</button>
+                <button onClick={() => setFilter("attention")} className={`px-4 py-2 rounded-full text-sm font-medium transition-all relative ${filter === "attention" ? "bg-destructive text-destructive-foreground shadow-sm" : "bg-background border border-destructive/40 text-destructive hover:bg-destructive/10"}`}>
+                  Need Attention ({counts.attention})
+                  {counts.attention > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full"></span>
+                  )}
+                </button>
+              </div>
+
+              {(searchTerm || filter !== "all") && (
+                <button onClick={clearFilters} className="text-sm text-foreground/70 hover:text-foreground font-medium flex items-center gap-1">
+                  <X className="w-4 h-4" />
+                  Clear
+                </button>
               )}
-            </button>
+            </div>
           </div>
 
-          {(searchTerm || filter !== "all") && (
-            <button onClick={clearFilters} className="text-sm text-foreground/70 hover:text-foreground font-medium flex items-center gap-1">
-              <X className="w-4 h-4" />
-              Clear
-            </button>
+          {/* Grid */}
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filtered.map((s) => (
+              <CustomerCard key={s.id} customer={s} onMessage={handleMessage} onMore={handleMoreOptions} />
+            ))}
+          </section>
+
+          {/* Empty state */}
+          {filtered.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
+              <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
+                <UsersIcon className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground mb-2">No customers found</h3>
+              <p className="text-sm text-muted-foreground text-center max-w-sm">
+                {searchTerm ? `No customers match "${searchTerm}"` : "Try adjusting your filters to see more customers"}
+              </p>
+              <button onClick={clearFilters} className="mt-4 px-4 py-2 text-sm text-primary hover:underline">
+                Clear all filters
+              </button>
+            </div>
           )}
-        </div>
-      </div>
+        </TabsContent>
 
-      {/* Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filtered.map((s) => (
-          <CustomerCard key={s.id} customer={s} onMessage={handleMessage} onMore={handleMoreOptions} />
-        ))}
-      </section>
-
-      {/* Empty state */}
-      {filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
-          <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
-            <UsersIcon className="w-8 h-8 text-primary" />
-          </div>
-          <h3 className="text-lg font-medium text-foreground mb-2">No customers found</h3>
-          <p className="text-sm text-muted-foreground text-center max-w-sm">
-            {searchTerm ? `No customers match "${searchTerm}"` : "Try adjusting your filters to see more customers"}
-          </p>
-          <button onClick={clearFilters} className="mt-4 px-4 py-2 text-sm text-primary hover:underline">
-            Clear all filters
-          </button>
-        </div>
-      )}
+        <TabsContent value="intro">
+          <IntroOffers embedded />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
