@@ -215,23 +215,31 @@ export default function CustomerDetail() {
     <TooltipProvider>
       <div className="space-y-6">
         {/* Header */}
-        <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-          <CardHeader className="flex flex-col gap-4">
-            <div className="flex items-start justify-start gap-4">
+        <Card className="border-none bg-transparent shadow-none">
+          <CardHeader className="p-0">
+            <div className="rounded-2xl bg-primary text-primary-foreground p-6 sm:p-8">
+              <div className="mb-6 flex items-center justify-between">
+                <Link to="/customers">
+                  <Button variant="secondary">
+                    <ArrowLeft className="mr-2" /> Back to all customers
+                  </Button>
+                </Link>
+              </div>
+
               <div className="flex items-start gap-4">
-                <Avatar className="h-14 w-14">
+                <Avatar className="h-16 w-16">
                   <AvatarFallback aria-label={`${fullName} avatar`}>
                     {customer.first_name[0]}
                     {customer.last_name[0]}
                   </AvatarFallback>
                 </Avatar>
-                <div className="space-y-1">
-                  <h1 className="text-xl font-semibold leading-tight">{fullName}</h1>
+                <div className="space-y-2">
+                  <h1 className="text-2xl font-semibold leading-tight">{fullName}</h1>
                   <div className="flex flex-wrap items-center gap-2">
                     {journeyBadge}
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-xs">
+                        <div className="inline-flex items-center gap-2 rounded-md bg-primary-foreground/10 px-2.5 py-1 text-xs">
                           <span>Engagement</span>
                           <EngagementDots level={customer.engagement} />
                         </div>
@@ -239,20 +247,9 @@ export default function CustomerDetail() {
                       <TooltipContent>High = likely to convert/retain</TooltipContent>
                     </Tooltip>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <a href={`mailto:${customer.email}`} aria-label={`Email ${fullName}`} className="inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-xs">
-                      <Mail className="h-3 w-3" />
-                      <span>{customer.email}</span>
-                    </a>
-                    <a href={`tel:${customer.phone}`} aria-label={`Call ${fullName}`} className="inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-xs">
-                      <Phone className="h-3 w-3" />
-                      <span>{customer.phone}</span>
-                    </a>
-                  </div>
                 </div>
               </div>
             </div>
-
           </CardHeader>
         </Card>
 
