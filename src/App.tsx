@@ -11,6 +11,7 @@ import Customers from "./pages/Customers";
 import ImportArketa from "./pages/ImportArketa";
 import Leads from "./pages/Leads";
 import Dashboard from "./pages/Dashboard";
+import ImageStudio from "./pages/ImageStudio";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/customers" element={<Customers />} />
             <Route path="/import" element={<ImportArketa />} />
             <Route path="/leads" element={<Leads />} />
+            <Route path="/images" element={<ImageStudio />} />
             
             <Route path="/customer/:id" element={<CustomerDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
