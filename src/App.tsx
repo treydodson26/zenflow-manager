@@ -10,6 +10,7 @@ import CustomerDetail from "./pages/CustomerDetail";
 import Customers from "./pages/Customers";
 import ImportArketa from "./pages/ImportArketa";
 import Leads from "./pages/Leads";
+import Dashboard from "./pages/Dashboard";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -21,6 +22,7 @@ const App = () => (
         <AppLayout>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/import" element={<ImportArketa />} />
             <Route path="/leads" element={<Leads />} />

@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/sidebar";
 
 const opsItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Home", url: "/", icon: LayoutDashboard },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Customers", url: "/customers", icon: Users },
   { title: "Instructor Hub", url: "/instructors", icon: GraduationCap },
   { title: "CSV Import", url: "/import", icon: Upload },
