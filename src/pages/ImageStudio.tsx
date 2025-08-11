@@ -37,11 +37,14 @@ const QUALITIES = [
 export default function ImageStudio() {
   const { toast } = useToast();
   const [prompt, setPrompt] = useState("");
+  const [title, setTitle] = useState("");
   const [size, setSize] = useState("1024x1024");
+  const [style, setStyle] = useState("vivid");
   const [format, setFormat] = useState("png");
   const [background, setBackground] = useState("auto");
   const [quality, setQuality] = useState("auto");
   const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [enhancedPrompt, setEnhancedPrompt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const pageTitle = useMemo(() => `AI Image Generator | Talo Yoga`, []);
@@ -82,18 +85,20 @@ export default function ImageStudio() {
     setIsLoading(true);
     setImageSrc(null);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-image", {
+      const { data, error } = await supabase.functions.invoke("marketing-generate-image", {
         body: {
           prompt,
+          title,
           size,
-          output_format: format,
-          background,
-          quality,
+          style,
+          metadata: {},
         },
       });
       if (error) throw error;
-      if (!data?.image) throw new Error("No image returned");
-      setImageSrc(data.image as string);
+      const url = data?.image?.url as string | undefined;
+      if (!url) throw new Error("No image returned");
+      setImageSrc(url);
+      setEnhancedPrompt(data?.image?.enhancedPrompt ?? null);
       toast({ title: "Image ready", description: "You can download or copy it now." });
     } catch (e: any) {
       console.error("generate-image error", e);
@@ -107,7 +112,7 @@ export default function ImageStudio() {
     if (!imageSrc) return;
     const a = document.createElement("a");
     a.href = imageSrc;
-    a.download = `talo-image-${Date.now()}.${format === "jpeg" ? "jpg" : format}`;
+    a.download = `talo-image-${Date.now()}.png`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -137,6 +142,10 @@ export default function ImageStudio() {
             <CardDescription>Use precise details: style, colors, layout, text to include, and mood.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title (optional)</Label>
+              <Input id="title" placeholder="E.g., Vinyasa Glow flyer" value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="prompt">Prompt</Label>
               <Textarea id="prompt" placeholder="E.g., A minimalist yoga class flyer for Friday 6pm, warm gradient background, bold headline 'Vinyasa Glow', instructor photo space, modern sans-serif typography" value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={6} />
@@ -174,29 +183,19 @@ export default function ImageStudio() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Background</Label>
-                <Select value={background} onValueChange={setBackground}>
+                <Select value={style} onValueChange={setStyle}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select background" />
+                    <SelectValue placeholder="Select style" />
                   </SelectTrigger>
                   <SelectContent>
-                    {BACKGROUNDS.map((b) => (
-                      <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
-                    ))}
+                    <SelectItem value="vivid">Vivid</SelectItem>
+                    <SelectItem value="natural">Natural</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Quality</Label>
-                <Select value={quality} onValueChange={setQuality}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select quality" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {QUALITIES.map((q) => (
-                      <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input readOnly value="HD (fixed)" />
               </div>
             </div>
 
@@ -212,12 +211,17 @@ export default function ImageStudio() {
         <Card>
           <CardHeader>
             <CardTitle>Result</CardTitle>
-            <CardDescription>The generated image appears here.</CardDescription>
+            <CardDescription>The generated image and enhanced prompt appear here.</CardDescription>
           </CardHeader>
           <CardContent>
             {imageSrc ? (
               <div className="space-y-4">
                 <img src={imageSrc} alt={`Generated image for: ${prompt}`} loading="lazy" className="w-full h-auto rounded-md" />
+                {enhancedPrompt && (
+                  <div className="text-xs text-muted-foreground">
+                    <strong>Enhanced prompt:</strong> {enhancedPrompt}
+                  </div>
+                )}
                 <div className="flex gap-3">
                   <Button variant="secondary" onClick={onDownload}><ImageDown className="mr-2 h-4 w-4" />Download</Button>
                   <Button variant="outline" onClick={onCopy}><Clipboard className="mr-2 h-4 w-4" />Copy</Button>

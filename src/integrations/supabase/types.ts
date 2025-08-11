@@ -870,6 +870,63 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_images: {
+        Row: {
+          campaign: string | null
+          created_at: string
+          enhanced_prompt: string
+          id: string
+          image_url: string
+          last_used_at: string | null
+          metadata: Json | null
+          original_prompt: string
+          size: string | null
+          storage_path: string
+          style: string | null
+          tags: string[] | null
+          title: string | null
+          updated_at: string
+          usage_count: number | null
+          user_id: string
+        }
+        Insert: {
+          campaign?: string | null
+          created_at?: string
+          enhanced_prompt: string
+          id?: string
+          image_url: string
+          last_used_at?: string | null
+          metadata?: Json | null
+          original_prompt: string
+          size?: string | null
+          storage_path: string
+          style?: string | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          usage_count?: number | null
+          user_id: string
+        }
+        Update: {
+          campaign?: string | null
+          created_at?: string
+          enhanced_prompt?: string
+          id?: string
+          image_url?: string
+          last_used_at?: string | null
+          metadata?: Json | null
+          original_prompt?: string
+          size?: string | null
+          storage_path?: string
+          style?: string | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          usage_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_sequences: {
         Row: {
           active: boolean | null

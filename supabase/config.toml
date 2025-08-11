@@ -32,3 +32,6 @@ verify_jwt = false
 [functions.openai-realtime-session]
 verify_jwt = false
 
+[functions.marketing-generate-image]
+verify_jwt = true
+
