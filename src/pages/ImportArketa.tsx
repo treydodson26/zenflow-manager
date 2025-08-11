@@ -88,7 +88,7 @@ function toBool(value: any) {
   return false;
 }
 
-export default function ImportArketa() {
+export default function ImportArketa({ embedded = false }: { embedded?: boolean }) {
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<PreviewRow[]>([]);
@@ -107,12 +107,13 @@ export default function ImportArketa() {
   });
 
   useEffect(() => {
+    if (embedded) return;
     document.title = "Import Arketa Client Data | Talo Yoga";
     ensureMeta("description", "Upload your daily Arketa CSV to synchronize customer records.");
     let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (!link) { link = document.createElement("link"); link.rel = "canonical"; document.head.appendChild(link); }
     link.href = `${window.location.origin}/import`;
-  }, []);
+  }, [embedded]);
 
   useEffect(() => {
     // Fetch last import timestamp via Edge Function
@@ -249,7 +250,11 @@ export default function ImportArketa() {
   return (
     <main className="space-y-8">
       <header className="space-y-1">
-        <h1 className="text-3xl font-semibold text-foreground">Import Arketa Client Data</h1>
+        {embedded ? (
+          <h2 className="text-2xl font-semibold text-foreground">Import Arketa Client Data</h2>
+        ) : (
+          <h1 className="text-3xl font-semibold text-foreground">Import Arketa Client Data</h1>
+        )}
         <p className="text-muted-foreground">Upload your daily CSV export from Arketa to sync client information</p>
         <p className="text-sm text-muted-foreground">Last imported: {lastImported ? lastImported : "No imports yet"}</p>
       </header>

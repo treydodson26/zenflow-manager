@@ -3,6 +3,7 @@ import { Search, X, Users as UsersIcon } from "lucide-react";
 import CustomerCard, { GalleryCustomer } from "@/components/customers/CustomerCard";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import IntroOffers from "./IntroOffers";
+import ImportArketa from "./ImportArketa";
 
 function ensureMeta(name: string, content: string) {
   let el = document.querySelector(`meta[name="${name}"]`);
@@ -94,6 +95,7 @@ export default function CustomersGallery() {
           <TabsTrigger value="intro">Intro Offer</TabsTrigger>
           <TabsTrigger value="dropins">Drop-Ins</TabsTrigger>
           <TabsTrigger value="prospects">Prospects</TabsTrigger>
+          <TabsTrigger value="import">Import</TabsTrigger>
         </TabsList>
 
         <TabsContent value="prospects">
@@ -194,6 +196,10 @@ export default function CustomersGallery() {
 
         <TabsContent value="intro">
           <IntroOffers embedded />
+        </TabsContent>
+
+        <TabsContent value="import">
+          <ImportArketa embedded />
         </TabsContent>
       </Tabs>
     </div>
