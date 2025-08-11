@@ -23,6 +23,7 @@ export type Database = {
           role: string
           thread_id: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           content: string
@@ -32,6 +33,7 @@ export type Database = {
           role: string
           thread_id: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           content?: string
@@ -41,6 +43,7 @@ export type Database = {
           role?: string
           thread_id?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -59,6 +62,7 @@ export type Database = {
           id: string
           title: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -66,6 +70,7 @@ export type Database = {
           id?: string
           title?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -73,6 +78,7 @@ export type Database = {
           id?: string
           title?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -930,6 +936,24 @@ export type Database = {
           id?: string
           segment_type?: string
           total_customers?: number
+        }
+        Relationships: []
+      }
+      user_rate_limits: {
+        Row: {
+          request_count: number
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          request_count?: number
+          user_id: string
+          window_start?: string
+        }
+        Update: {
+          request_count?: number
+          user_id?: string
+          window_start?: string
         }
         Relationships: []
       }
