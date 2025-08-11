@@ -47,8 +47,8 @@ serve(async (req) => {
         size,
         background,
         quality,
-        response_format: "b64_json",
         output_format,
+        n: 1,
       }),
     });
 
