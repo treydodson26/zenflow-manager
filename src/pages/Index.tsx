@@ -26,15 +26,9 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-[75vh] flex flex-col">
-      {/* Optional hero copy */}
-      <section className="pt-6 pb-8">
-        <h1 className="sr-only">Talo Yoga Home</h1>
-        <p className="text-muted-foreground">Welcome to Talo — your studio’s AI assistant.</p>
-      </section>
-
-      {/* Assistant anchored to bottom of page */}
-      <section className="mt-auto">
+    <div className="min-h-[85vh] flex items-center justify-center">
+      <section className="w-full max-w-5xl px-4">
+        <h1 className="sr-only">Chat with Fred — Talo Yoga AI Studio Assistant</h1>
         <Suspense fallback={<div className="text-sm text-muted-foreground">Loading assistant…</div>}>
           <HomeChatHero />
         </Suspense>

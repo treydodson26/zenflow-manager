@@ -59,8 +59,8 @@ export default function HomeChatHero() {
   return (
     <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/15 via-accent/10 to-secondary/15 p-6 sm:p-10">
       <div className="mx-auto w-full max-w-3xl text-center">
-        <p className="text-sm text-muted-foreground mb-2">Studio Assistant</p>
-        <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">How can I help today?</h2>
+        <p className="text-sm text-muted-foreground mb-2">Fred — Studio Assistant</p>
+        <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">Chat with Fred</h2>
         <p className="text-muted-foreground mt-2">Plan outreach, analyze attendance, or draft a WhatsApp in one place.</p>
 
         <div className="mt-6 flex items-center justify-center">
@@ -118,7 +118,7 @@ export default function HomeChatHero() {
           {messages.map((m, i) => (
             <Card key={i} className={m.role === "user" ? "border-primary/30" : ""}>
               <div className="px-4 py-3 text-sm whitespace-pre-wrap">
-                <span className="font-medium mr-2">{m.role === "user" ? "You" : "Assistant"}:</span>
+                <span className="font-medium mr-2">{m.role === "user" ? "You" : "Fred"}:</span>
                 {m.content}
               </div>
             </Card>
