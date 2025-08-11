@@ -4,8 +4,8 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Bot } from "lucide-react";
 import AgentFred from "@/components/AgentFred";
-import VoiceInterface from "@/components/VoiceInterface";
-import { useLocation } from "react-router-dom";
+
+
 interface AppLayoutProps { children: ReactNode }
 
 export const AppLayout = ({ children }: AppLayoutProps) => {
@@ -19,9 +19,6 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
     });
   }, []);
   const [open, setOpen] = useState(false);
-  const location = useLocation();
-  const showVoice = location.pathname !== "/marketing";
-
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -55,9 +52,6 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
         </Dialog>
 
         <main className="flex-1 p-4 lg:p-6">{children}</main>
-
-        {/* Realtime OpenAI voice interface - floating control */}
-        {showVoice && <VoiceInterface />}
 
       </SidebarInset>
     </SidebarProvider>
