@@ -94,6 +94,34 @@ const tools = {
     if (error) throw error;
     return data;
   },
+  async get_customers_created_in_month(params: { month: string | number; year?: number; limit?: number }) {
+    const now = new Date();
+    const monthInput = params?.month;
+    const toMonthNumber = (m: string | number): number => {
+      if (typeof m === "number") return Math.min(12, Math.max(1, m));
+      const idx = [
+        "january","february","march","april","may","june",
+        "july","august","september","october","november","december"
+      ].indexOf(m.toLowerCase());
+      return idx >= 0 ? idx + 1 : now.getMonth() + 1;
+    };
+    const monthNum = toMonthNumber(monthInput ?? now.getMonth() + 1);
+    const year = Number(params?.year) || now.getFullYear();
+
+    const start = new Date(year, monthNum - 1, 1);
+    const end = new Date(year, monthNum, 1);
+    const limit = Math.max(1, Math.min(500, Number(params?.limit) || 100));
+
+    const { data, error } = await supabase
+      .from("customers")
+      .select("id, first_name, last_name, client_email, status, created_at, total_lifetime_value")
+      .gte("created_at", start.toISOString())
+      .lt("created_at", end.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return data;
+  },
   async stats_overview() {
     // Fetch statuses and compute counts client-side to avoid raw SQL aggregates
     const { data, error } = await supabase
@@ -195,6 +223,20 @@ serve(async (req) => {
       },
       {
         type: "function",
+        name: "get_customers_created_in_month",
+        description: "List customers created in a specific month and year (defaults to current year).",
+        parameters: {
+          type: "object",
+          properties: {
+            month: { anyOf: [ { type: "string" }, { type: "number" } ] },
+            year: { type: "number" },
+            limit: { type: "number" },
+          },
+          required: ["month"],
+        },
+      },
+      {
+        type: "function",
         name: "stats_overview",
         description: "Return counts by status for customers.",
         parameters: { type: "object", properties: {} },
@@ -249,20 +291,30 @@ serve(async (req) => {
       data = cont.data;
     }
 
-    const text: string = data?.output_text
-      || (() => {
-        try {
-          const output = data?.output || [];
-          for (const item of output) {
-            const contents = item?.content || [];
-            for (const c of contents) {
-              if (c?.type === "output_text" && typeof c?.text === "string") return c.text;
-              if (c?.type === "text" && typeof c?.text === "string") return c.text;
-            }
+    const extractText = (payload: any): string => {
+      if (payload?.output_text && typeof payload.output_text === "string") return payload.output_text;
+      try {
+        const output = payload?.output || [];
+        for (const item of output) {
+          const contents = item?.content || [];
+          for (const c of contents) {
+            if (c?.type === "output_text" && typeof c?.text === "string") return c.text;
+            if (c?.type === "text" && typeof c?.text === "string") return c.text;
           }
-        } catch {}
-        return "";
-      })();
+        }
+      } catch {}
+      try {
+        const msg = payload?.message || payload?.messages?.[0];
+        const parts = msg?.content || [];
+        for (const p of parts) if (typeof p?.text === "string") return p.text;
+      } catch {}
+      return "";
+    };
+
+    let text: string = extractText(data);
+    if (!text || !text.trim()) {
+      text = "I couldn’t find enough info to answer that. Try being more specific (e.g., ‘inactive for 30 days’, ‘customers created in July 2024’, or ‘prospects named Alex’).";
+    }
 
     return new Response(JSON.stringify({ text }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
