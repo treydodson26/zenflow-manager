@@ -1,8 +1,8 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, lazy, Suspense } from "react";
 import KPITrendCard from "@/components/dashboard/KPITrendCard";
 import StudioCalendar from "@/components/calendar/StudioCalendar";
 import { Card, CardContent } from "@/components/ui/card";
-import HomeChatHero from "@/components/chat/HomeChatHero";
+const HomeChatHero = lazy(() => import("@/components/chat/HomeChatHero"));
 const Index = () => {
 
   useEffect(() => {
@@ -35,7 +35,9 @@ const Index = () => {
     <div className="space-y-6 lg:space-y-8">
       <section className="animate-fade-in">
         <h1 className="sr-only">Yoga Studio Dashboard and AI Assistant</h1>
-        <HomeChatHero />
+        <Suspense fallback={<div className="text-sm text-muted-foreground">Loading assistant…</div>}>
+          <HomeChatHero />
+        </Suspense>
       </section>
 
       {/* KPIs with trends and actions */}
