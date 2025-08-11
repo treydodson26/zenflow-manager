@@ -1,7 +1,5 @@
 project_id = "mvndgpmetndvjsmvhqqh"
 
-# ... keep existing code (existing function settings)
-
 [functions.ai-ask]
 verify_jwt = false
 
@@ -35,3 +33,5 @@ verify_jwt = false
 [functions.marketing-generate-image]
 verify_jwt = true
 
+[functions.ask-fred]
+verify_jwt = false

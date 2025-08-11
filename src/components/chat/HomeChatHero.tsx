@@ -36,13 +36,8 @@ export default function HomeChatHero() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("generate-text", {
-        body: {
-          prompt: text,
-          model: "gpt-4.1-2025-04-14",
-          temperature: 0.2,
-          system: "You are Talo Yoga's helpful studio assistant. Be concise and actionable.",
-        },
+      const { data, error } = await supabase.functions.invoke("ask-fred", {
+        body: { question: text },
       });
       if (error) throw error;
       const reply = (data as any)?.text || (data as any)?.generatedText || "";
