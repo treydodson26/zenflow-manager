@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import KPITrendCard from "@/components/dashboard/KPITrendCard";
 import StudioCalendar from "@/components/calendar/StudioCalendar";
 import { Card, CardContent } from "@/components/ui/card";
-
+import HomeChatHero from "@/components/chat/HomeChatHero";
 const Index = () => {
 
   useEffect(() => {
@@ -34,8 +34,8 @@ const Index = () => {
   return (
     <div className="space-y-6 lg:space-y-8">
       <section className="animate-fade-in">
-        <h1 className="text-3xl font-semibold tracking-tight">Welcome back, Emily</h1>
-        <p className="text-muted-foreground mt-1">Here’s the pulse of your studio today.</p>
+        <h1 className="sr-only">Yoga Studio Dashboard and AI Assistant</h1>
+        <HomeChatHero />
       </section>
 
       {/* KPIs with trends and actions */}
