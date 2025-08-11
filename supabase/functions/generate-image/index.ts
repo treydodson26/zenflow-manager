@@ -35,6 +35,59 @@ serve(async (req) => {
       );
     }
 
+    // Step 1: Expand the user's prompt into a detailed image prompt using GPT-4.1
+    const systemMessage = `# Overview
+You are an expert image prompt engineer. Your role is to take a simple image topic or concept and expand it into a fully detailed image prompt that can be fed into a text-to-image generation model.
+
+## Prompt Instructions
+Your detailed prompt must clearly describe the following:
+1) Main Subject: What is the primary focus of the image?
+2) Background/Setting: What is happening in the background or environment?
+3) Style: Specify the visual style (e.g., hyper-realistic, digital painting, watercolor, anime, 3D render, etc.).
+4) Mood/Lighting: Describe the emotional tone and lighting (e.g., soft warm sunset, moody storm clouds, futuristic neon lights).
+5) Additional Details: Mention any specific objects, clothing, colors, textures, or notable features that should appear.
+
+## Output Format
+- Begin with a clean, natural-sounding descriptive prompt that integrates all of the above elements seamlessly.
+- The description should sound like it’s written specifically for an AI to generate a professional, high-quality image.
+- Avoid repeating the original topic verbatim — instead, reframe it into a vivid scene or visual concept.
+- Use rich, vivid language and imagery.
+
+## Example
+- Input: "A futuristic city"
+- Output: "A sprawling futuristic city at night, glowing with neon lights in shades of blue and purple. Towering skyscrapers with sleek, glass facades line the horizon. Flying cars zoom between the buildings under a cloudy, electric sky. The streets below are bustling with holographic advertisements and people wearing high-tech fashion. Digital painting style, highly detailed, cinematic perspective, moody atmosphere with soft neon reflections on wet pavement."`;
+
+    const chatRes = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-2025-04-14",
+        messages: [
+          { role: "system", content: systemMessage },
+          { role: "user", content: String(prompt) }
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    const chatData = await chatRes.json();
+    if (!chatRes.ok) {
+      console.error("Prompt expansion error:", chatData);
+      const msg = chatData?.error?.message || "Prompt expansion failed";
+      return new Response(
+        JSON.stringify({ error: msg }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    let finalPrompt = chatData?.choices?.[0]?.message?.content ?? prompt;
+    // Mimic the n8n workflow behavior: remove all double quotes and trim
+    finalPrompt = String(finalPrompt).replace(/\"/g, '"').replace(/"/g, "").trim();
+
+    // Step 2: Generate the image using gpt-image-1 with the expanded prompt
     const response = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: {
@@ -43,7 +96,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "gpt-image-1",
-        prompt,
+        prompt: finalPrompt,
         size,
         background,
         quality,
@@ -75,7 +128,7 @@ serve(async (req) => {
     const image = `data:image/${mime};base64,${b64}`;
 
     return new Response(
-      JSON.stringify({ image }),
+      JSON.stringify({ image, usedPrompt: finalPrompt }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
