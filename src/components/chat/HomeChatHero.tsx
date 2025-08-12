@@ -2,9 +2,10 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Send, Square, RotateCcw, User, Bot, Mic } from "lucide-react";
+import { Send, Square, RotateCcw, User, Bot, Mic, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useSidebar } from "@/components/ui/sidebar";
 
 
 interface Message {
@@ -36,6 +37,8 @@ export default function HomeChatHero() {
   const [isStreaming, setIsStreaming] = useState(false);
   const streamingStopRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const { open, toggleSidebar } = useSidebar();
 
   const placeholder = useMemo(() => "Ask anything", []);
 
@@ -154,9 +157,9 @@ const regenerate = () => {
             const isUser = m.role === "user";
             const time = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
             return (
-              <div key={i} className="px-4 py-3">
+              <div key={i} className="px-4 py-3 group animate-fade-in">
                 <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] sm:max-w-[70%] rounded-2xl border shadow-sm px-4 py-3 ${isUser ? 'bg-primary/10 border-primary/20' : 'bg-card'}`}>
+                  <div className={`max-w-[80%] sm:max-w-[70%] rounded-2xl border px-4 py-3 ${isUser ? 'bg-primary text-primary-foreground border-primary shadow' : 'bg-muted/60 border-border shadow-sm'}`}>
                     <div className="flex items-start gap-3">
                       <div className="shrink-0 w-8 h-8 rounded-full border bg-background/80 flex items-center justify-center">
                         {isUser ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
@@ -167,7 +170,7 @@ const regenerate = () => {
                     </div>
                   </div>
                 </div>
-                <div className={`mt-1 text-xs text-muted-foreground ${isUser ? 'text-right' : 'text-left'}`}>{time}</div>
+                <div className={`mt-1 text-xs text-muted-foreground ${isUser ? 'text-right' : 'text-left'} opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>{time}</div>
               </div>
             );
           })}
@@ -175,7 +178,7 @@ const regenerate = () => {
           {(loading || isStreaming) && (
             <div className="px-4 py-3">
               <div className="flex justify-start">
-                <div className="max-w-[80%] sm:max-w-[70%] rounded-2xl border shadow-sm px-4 py-3 bg-card">
+                <div className="max-w-[80%] sm:max-w-[70%] rounded-2xl border shadow-sm px-4 py-3 bg-muted/60 border-border">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center border bg-background/80">
                       <Bot className="h-5 w-5" />
@@ -191,6 +194,21 @@ const regenerate = () => {
             </div>
           )}
 
+          {messages.length <= 1 && !loading && !isStreaming && (
+            <div className="px-4 py-3 animate-fade-in">
+              <div className="flex flex-wrap gap-2 justify-center">
+                {EXAMPLES.map((ex) => (
+                  <button
+                    key={ex}
+                    onClick={() => send(ex)}
+                    className="px-3 py-1.5 text-sm rounded-full border bg-muted hover:bg-muted/80 transition-colors"
+                  >
+                    {ex}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div ref={scrollRef} />
         </div>
       </div>
@@ -198,20 +216,6 @@ const regenerate = () => {
       {/* Input area */}
       <div className="fixed bottom-0 left-0 w-full bg-background/95 backdrop-blur border-t z-50 pb-[env(safe-area-inset-bottom)]">
         <div className="px-4 py-3 sm:px-6">
-          {/* Suggestions as chips */}
-          {messages.length <= 1 && (
-            <div className="mb-2 flex flex-wrap gap-2 px-1">
-              {EXAMPLES.map((ex) => (
-                <button
-                  key={ex}
-                  onClick={() => send(ex)}
-                  className="px-3 py-1.5 text-sm rounded-full border bg-muted hover:bg-muted/80 transition-colors"
-                >
-                  {ex}
-                </button>
-              ))}
-            </div>
-          )}
 
           <div className="relative">
             <Textarea
@@ -230,12 +234,15 @@ const regenerate = () => {
                 }
               }}
               placeholder={placeholder}
-              className="w-full pr-24 resize-none rounded-2xl shadow-sm bg-muted"
+              className="w-full pr-28 resize-none rounded-2xl shadow bg-muted border border-input py-4 text-base placeholder:text-base"
               rows={1}
             />
 
-            {/* Action buttons (mic + send / stop / regenerate) */}
+            {/* Action buttons (focus, mic + send / stop / regenerate) */}
             <div className="absolute bottom-2 right-2 flex gap-2">
+              <Button type="button" size="icon" variant="ghost" className="rounded-full" title={open ? "Exit focus mode" : "Focus mode"} onClick={toggleSidebar}>
+                {open ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
+              </Button>
               <Button type="button" size="icon" variant="ghost" className="rounded-full" title="Voice">
                 <Mic className="h-5 w-5" />
               </Button>
