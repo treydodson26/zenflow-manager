@@ -781,8 +781,20 @@ serve(async (req) => {
 
     const instructions = `You are Fred, the Talo Yoga studio assistant.
 - You can answer questions about customers by calling tools.
+- Prefer the analytics tool for natural-language analytics questions.
 - Keep answers concise and actionable. Include counts and short bullet lists.
-- If data is insufficient, say so and suggest the next step.`;
+- If data is insufficient, say so and suggest the next step.
+
+Intent mapping examples (use these to choose analytics metric and args):
+- "Who hasn’t visited in 60–90 days" -> analytics(metric="inactive_bucket", bucket="60-90")
+- "Who’s active last 30 days" -> analytics(metric="recent_active", periodDays=30)
+- "Retention by cohort" -> analytics(metric="retention_by_cohort")
+- "Upcoming birthdays" -> analytics(metric="upcoming_birthdays_30d")
+- "ClassPass vs direct retention" -> analytics(metric="retention_by_source")
+- "Missing phone numbers" -> analytics(metric="missing_phone_counts")
+- "Duplicate emails" -> analytics(metric="duplicate_emails")
+- "Age distribution" -> analytics(metric="age_distribution")
+- "Waiver completion rate" -> analytics(metric="waiver_overall_rate")`;
 
     const toolDefs = [
       {
@@ -851,6 +863,21 @@ serve(async (req) => {
         name: "stats_overview",
         description: "Return counts by status for customers.",
         parameters: { type: "object", properties: {} },
+      },
+      {
+        type: "function",
+        name: "analytics",
+        description: "Comprehensive analytics over customers. Metrics include: recent_active, inactive_bucket (bucket: '30-60'|'60-90'|'90+'), avg_lifetime, longest_standing, one_time_vs_repeat, retention_by_cohort, early_engaged_inactive, marketing_optins_summary, active_no_marketing, phone_without_sms_optin, marketing_retention_correlation, transactional_not_marketing, contact_info_completeness, classpass_optin_summary, waiver_missing_recent, waiver_overall_rate, recent_no_waiver_7d, waiver_rate_by_tenure, classpass_without_waivers, source_split, age_distribution, upcoming_birthdays_30d, birthdays_by_month, birthday_completion_rate, city_distribution, tag_distribution, missing_fields_overview, missing_phone_counts, incomplete_names, duplicate_emails, duplicate_phones, no_tags_stats, profile_completeness_breakdown, acquisition_by_month, growth_trend, lifetime_stats, milestones_summary, milestones_distribution, registration_by_hour, registration_by_dow, retention_by_source, classpass_conversion_proxy, optin_rates_by_source, waiver_by_source, engagement_duration_by_source, lapsed_with_optins_30_90, regular_but_lapsed_60_90, inactive_birthdays_soon, inactive_channel_reachability, journey_buckets, same_day_vs_returned, contact_info_retention_correlation, seasonal_registration_patterns, first_visit_time_of_day_buckets.",
+        parameters: {
+          type: "object",
+          properties: {
+            metric: { type: "string" },
+            periodDays: { type: "number" },
+            bucket: { type: "string" },
+            limit: { type: "number" }
+          },
+          required: ["metric"]
+        }
       },
     ];
 
