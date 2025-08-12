@@ -197,7 +197,7 @@ const regenerate = () => {
 
       {/* Input area */}
       <div className="fixed bottom-0 left-0 w-full bg-background/95 backdrop-blur border-t">
-        <div className="max-w-3xl mx-auto p-4">
+        <div className="px-4 py-3 sm:px-6">
           {/* Suggestions as chips */}
           {messages.length <= 1 && (
             <div className="mb-2 flex flex-wrap gap-2 px-1">
