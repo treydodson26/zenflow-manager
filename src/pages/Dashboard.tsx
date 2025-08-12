@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import KPITrendCard from "@/components/dashboard/KPITrendCard";
 import StudioCalendar from "@/components/calendar/StudioCalendar";
 import { Card, CardContent } from "@/components/ui/card";
+import StatCard from "@/components/dashboard/StatCard";
 
 const Dashboard = () => {
   type Metrics = {
@@ -11,6 +12,10 @@ const Dashboard = () => {
     revenue_this_month: number | null;
     revenue_change_pct: number | null; // ratio, e.g., 0.08 => +8%
     retention_rate_pct: number | null;
+    marketing_summary?: { total: number; email_opt_ins: number; text_opt_ins: number; email_opt_in_rate: number };
+    source_breakdown?: { classpass: number; direct: number; avg_lifetime_days_classpass: number | null; avg_lifetime_days_direct: number | null };
+    waiver_missing_active_7d?: number;
+    engagement_segments?: { active_7d: number; recent_8_30: number; lapsed_31_90: number; inactive_90_plus: number };
   };
 
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -83,6 +88,16 @@ const Dashboard = () => {
         <KPITrendCard title="Class Occupancy" value={formatPct(metrics?.class_occupancy_pct)} trend={trends.occupancy} actionLabel="Promote Underfilled Classes" onAction={() => (window.location.href = "/leads")} />
         <KPITrendCard title="Revenue" value={formatCurrency(metrics?.revenue_this_month)} change={formatChange(metrics?.revenue_change_pct)} trend={trends.revenue} actionLabel="Send Offer" onAction={() => (window.location.href = "/marketing")} />
         <KPITrendCard title="Retention Rate" value={formatPct(metrics?.retention_rate_pct)} trend={trends.retention} actionLabel="Nurture Drop‑offs" onAction={() => (window.location.href = "/segments")} />
+      </section>
+
+      <section aria-labelledby="insights-heading" className="space-y-4">
+        <h2 id="insights-heading" className="text-xl font-semibold">Client Insights</h2>
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard title="Email Opt-in Rate" value={formatPct((metrics?.marketing_summary?.email_opt_in_rate as number) ?? null)} subtitle={`${metrics?.marketing_summary?.email_opt_ins ?? 0}/${metrics?.marketing_summary?.total ?? 0} opted in`} />
+          <StatCard title="Text Opt-ins" value={String(metrics?.marketing_summary?.text_opt_ins ?? '—')} subtitle="SMS marketing consent" />
+          <StatCard title="ClassPass Clients" value={String(metrics?.source_breakdown?.classpass ?? '—')} subtitle={`Direct: ${metrics?.source_breakdown?.direct ?? 0}`} />
+          <StatCard title="Active Last 7 Days" value={String(metrics?.engagement_segments?.active_7d ?? '—')} subtitle={`Lapsed 31–90: ${metrics?.engagement_segments?.lapsed_31_90 ?? 0}`} />
+        </div>
       </section>
 
       <section>

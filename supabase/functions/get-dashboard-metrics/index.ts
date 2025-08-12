@@ -66,12 +66,90 @@ serve(async (req) => {
       ? (Number(revenue_this_month || 0) - Number(revenue_last_month)) / Number(revenue_last_month)
       : null;
 
+    // Additional customer-derived insights
+    const { data: custRows, error: custErr } = await supabase
+      .from("customers")
+      .select("first_seen, last_seen, marketing_email_opt_in, marketing_text_opt_in, tags, agree_to_liability_waiver")
+      .limit(5000);
+    if (custErr) console.error("customers insights error", custErr);
+
+    const rows = (custRows || []).map((r: any) => ({
+      first_seen: r.first_seen ? new Date(r.first_seen) : null,
+      last_seen: r.last_seen ? new Date(r.last_seen) : null,
+      email_opt: !!r.marketing_email_opt_in,
+      sms_opt: !!r.marketing_text_opt_in,
+      tags: (r.tags ?? '').toString().toLowerCase(),
+      waiver_ok: r.agree_to_liability_waiver === true,
+    }));
+
+    const totalClients = rows.length;
+    const email_opt_ins = rows.filter(r => r.email_opt).length;
+    const text_opt_ins = rows.filter(r => r.sms_opt).length;
+    const email_opt_in_rate = totalClients ? Math.round((email_opt_ins / totalClients) * 10000) / 100 : 0;
+
+    const isClassPass = (tags: string) => tags.includes('classpass');
+    let classpass = 0, direct = 0;
+    const cpLifetimes: number[] = [];
+    const directLifetimes: number[] = [];
+
+    const lifetimeDays = (r: any): number | null => {
+      if (!r.first_seen || !r.last_seen) return null;
+      return (r.last_seen.getTime() - r.first_seen.getTime()) / 86400000;
+    };
+
+    for (const r of rows) {
+      const cp = isClassPass(r.tags);
+      const lt = lifetimeDays(r);
+      if (cp) {
+        classpass++;
+        if (lt !== null && isFinite(lt)) cpLifetimes.push(lt);
+      } else {
+        direct++;
+        if (lt !== null && isFinite(lt)) directLifetimes.push(lt);
+      }
+    }
+    const avg = (arr: number[]) => arr.length ? Math.round((arr.reduce((a,b)=>a+b,0) / arr.length) * 10) / 10 : null;
+
+    const cutoff7 = new Date(Date.now() - 7 * 86400000);
+    const waiver_missing_active_7d = rows.filter(r => !r.waiver_ok && r.last_seen && r.last_seen >= cutoff7).length;
+
+    const daysSince = (d: Date) => Math.floor((Date.now() - d.getTime()) / 86400000);
+    let active_7d = 0, recent_8_30 = 0, lapsed_31_90 = 0, inactive_90_plus = 0;
+    for (const r of rows) {
+      if (!r.last_seen) continue; // skip unknowns for segments
+      const d = daysSince(r.last_seen);
+      if (d <= 7) active_7d++;
+      else if (d <= 30) recent_8_30++;
+      else if (d <= 90) lapsed_31_90++;
+      else inactive_90_plus++;
+    }
+
     const body = {
       active_customers: typeof activeCustomers === "number" ? activeCustomers : null,
       class_occupancy_pct: avg_capacity_today, // expected 0-100
       revenue_this_month,
       revenue_change_pct, // ratio, e.g., 0.08 => +8%
       retention_rate_pct,
+      // New insights
+      marketing_summary: {
+        total: totalClients,
+        email_opt_ins,
+        text_opt_ins,
+        email_opt_in_rate,
+      },
+      source_breakdown: {
+        classpass,
+        direct,
+        avg_lifetime_days_classpass: avg(cpLifetimes),
+        avg_lifetime_days_direct: avg(directLifetimes),
+      },
+      waiver_missing_active_7d,
+      engagement_segments: {
+        active_7d,
+        recent_8_30,
+        lapsed_31_90,
+        inactive_90_plus,
+      },
     };
 
     return new Response(JSON.stringify(body), {
