@@ -227,8 +227,8 @@ const regenerate = () => {
       {/* Input area */}
       <div className="fixed bottom-0 left-0 w-full bg-transparent border-0 z-50 pb-[env(safe-area-inset-bottom)]">
         <div className="px-4 py-3 sm:px-6">
-          <div className="max-w-3xl mx-auto">
-            <div className="relative">
+          <div className="flex justify-center">
+            <div className="relative w-full max-w-2xl">
             <Textarea
               ref={textareaRef}
               value={input}
