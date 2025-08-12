@@ -69,7 +69,7 @@ serve(async (req) => {
     // Additional customer-derived insights
     const { data: custRows, error: custErr } = await supabase
       .from("customers")
-      .select("first_seen, last_seen, marketing_email_opt_in, marketing_text_opt_in, tags, agree_to_liability_waiver")
+      .select("first_seen, last_seen, marketing_email_opt_in, marketing_text_opt_in, tags, agree_to_liability_waiver, phone_number, birthday")
       .limit(5000);
     if (custErr) console.error("customers insights error", custErr);
 
@@ -80,6 +80,8 @@ serve(async (req) => {
       sms_opt: !!r.marketing_text_opt_in,
       tags: (r.tags ?? '').toString().toLowerCase(),
       waiver_ok: r.agree_to_liability_waiver === true,
+      has_phone: !!r.phone_number,
+      has_birthday: !!r.birthday,
     }));
 
     const totalClients = rows.length;
@@ -110,10 +112,14 @@ serve(async (req) => {
     }
     const avg = (arr: number[]) => arr.length ? Math.round((arr.reduce((a,b)=>a+b,0) / arr.length) * 10) / 10 : null;
 
-    const cutoff7 = new Date(Date.now() - 7 * 86400000);
+    const now = new Date();
+    const cutoff7 = new Date(now.getTime() - 7 * 86400000);
+    const cutoff30 = new Date(now.getTime() - 30 * 86400000);
+    const cutoff37 = new Date(now.getTime() - 37 * 86400000);
+
     const waiver_missing_active_7d = rows.filter(r => !r.waiver_ok && r.last_seen && r.last_seen >= cutoff7).length;
 
-    const daysSince = (d: Date) => Math.floor((Date.now() - d.getTime()) / 86400000);
+    const daysSince = (d: Date) => Math.floor((now.getTime() - d.getTime()) / 86400000);
     let active_7d = 0, recent_8_30 = 0, lapsed_31_90 = 0, inactive_90_plus = 0;
     for (const r of rows) {
       if (!r.last_seen) continue; // skip unknowns for segments
@@ -123,6 +129,27 @@ serve(async (req) => {
       else if (d <= 90) lapsed_31_90++;
       else inactive_90_plus++;
     }
+
+    // Executive KPIs
+    const active_30d = rows.filter(r => r.last_seen && r.last_seen >= cutoff30).length;
+    const mrr_estimate = active_30d * 150; // assumed $150/month per active
+
+    const new_this_week = rows.filter(r => r.first_seen && r.first_seen >= new Date(now.getTime() - 7*86400000)).length;
+    const new_last_week = rows.filter(r => r.first_seen && r.first_seen < new Date(now.getTime() - 7*86400000) && r.first_seen >= new Date(now.getTime() - 14*86400000)).length;
+    const weekly_growth_rate = new_last_week > 0 ? (new_this_week - new_last_week) / new_last_week : null;
+
+    const about_to_churn = rows.filter(r => r.last_seen && r.last_seen < cutoff30 && r.last_seen >= cutoff37).length;
+    const active_no_waiver = rows.filter(r => !r.waiver_ok && r.last_seen && r.last_seen >= cutoff7).length;
+
+    const with_phone = rows.filter(r => r.has_phone).length;
+    const with_birthday = rows.filter(r => r.has_birthday).length;
+    const marketable = rows.filter(r => r.email_opt || r.sms_opt).length;
+    const data_completeness_score = totalClients
+      ? Math.round(((100*with_phone/totalClients + 100*with_birthday/totalClients + 100*marketable/totalClients) / 3) )
+      : 0;
+
+    const new_this_month = rows.filter(r => r.first_seen && r.first_seen >= new Date(now.getTime() - 30*86400000)).length;
+    const ltv_cac_ratio = new_this_month > 0 ? (mrr_estimate) / (new_this_month * 50) : null;
 
     const body = {
       active_customers: typeof activeCustomers === "number" ? activeCustomers : null,
@@ -149,6 +176,14 @@ serve(async (req) => {
         recent_8_30,
         lapsed_31_90,
         inactive_90_plus,
+      },
+      executive_kpis: {
+        mrr_estimate,
+        weekly_growth_rate,
+        churn_risk_about_to_churn: about_to_churn,
+        legal_exposure_active_no_waiver: active_no_waiver,
+        data_completeness_score,
+        ltv_cac_ratio,
       },
     };
 

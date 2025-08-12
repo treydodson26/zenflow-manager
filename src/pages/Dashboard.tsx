@@ -16,6 +16,7 @@ const Dashboard = () => {
     source_breakdown?: { classpass: number; direct: number; avg_lifetime_days_classpass: number | null; avg_lifetime_days_direct: number | null };
     waiver_missing_active_7d?: number;
     engagement_segments?: { active_7d: number; recent_8_30: number; lapsed_31_90: number; inactive_90_plus: number };
+    executive_kpis?: { mrr_estimate: number; weekly_growth_rate: number | null; churn_risk_about_to_churn: number; legal_exposure_active_no_waiver: number; data_completeness_score: number; ltv_cac_ratio: number | null };
   };
 
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -36,6 +37,11 @@ const Dashboard = () => {
     const pct = Math.round(ratio * 100);
     const sign = pct >= 0 ? "+" : "";
     return `${sign}${pct}%`;
+  };
+
+  const formatRatioX = (r: number | null | undefined) => {
+    if (r === null || r === undefined || !isFinite(r)) return "—";
+    return `${Math.round(r * 10) / 10}x`;
   };
 
   useEffect(() => {
@@ -90,13 +96,16 @@ const Dashboard = () => {
         <KPITrendCard title="Retention Rate" value={formatPct(metrics?.retention_rate_pct)} trend={trends.retention} actionLabel="Nurture Drop‑offs" onAction={() => (window.location.href = "/segments")} />
       </section>
 
-      <section aria-labelledby="insights-heading" className="space-y-4">
-        <h2 id="insights-heading" className="text-xl font-semibold">Client Insights</h2>
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard title="Email Opt-in Rate" value={formatPct((metrics?.marketing_summary?.email_opt_in_rate as number) ?? null)} subtitle={`${metrics?.marketing_summary?.email_opt_ins ?? 0}/${metrics?.marketing_summary?.total ?? 0} opted in`} />
-          <StatCard title="Text Opt-ins" value={String(metrics?.marketing_summary?.text_opt_ins ?? '—')} subtitle="SMS marketing consent" />
-          <StatCard title="ClassPass Clients" value={String(metrics?.source_breakdown?.classpass ?? '—')} subtitle={`Direct: ${metrics?.source_breakdown?.direct ?? 0}`} />
-          <StatCard title="Active Last 7 Days" value={String(metrics?.engagement_segments?.active_7d ?? '—')} subtitle={`Lapsed 31–90: ${metrics?.engagement_segments?.lapsed_31_90 ?? 0}`} />
+      {/* Executive KPIs */}
+      <section aria-labelledby="exec-kpis-heading" className="space-y-4">
+        <h2 id="exec-kpis-heading" className="text-xl font-semibold">Executive KPIs</h2>
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-6">
+          <StatCard title="MRR Estimate" value={formatCurrency(metrics?.executive_kpis?.mrr_estimate as any)} subtitle="$150 per active client" />
+          <StatCard title="Weekly Growth" value={formatChange(metrics?.executive_kpis?.weekly_growth_rate as any) ?? "—"} subtitle="New signups vs last week" />
+          <StatCard title="Churn Risk (30d)" value={String(metrics?.executive_kpis?.churn_risk_about_to_churn ?? '—')} subtitle="At 30–37 day mark" />
+          <StatCard title="Legal Exposure" value={String(metrics?.executive_kpis?.legal_exposure_active_no_waiver ?? '—')} subtitle="Active 7d w/o waiver" />
+          <StatCard title="Data Completeness" value={formatPct(metrics?.executive_kpis?.data_completeness_score as any)} subtitle="Phone, Birthday, Opt-ins" />
+          <StatCard title="LTV/CAC" value={formatRatioX(metrics?.executive_kpis?.ltv_cac_ratio as any)} subtitle="Target ≥ 3.0x" />
         </div>
       </section>
 
