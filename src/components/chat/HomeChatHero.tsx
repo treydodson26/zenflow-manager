@@ -146,7 +146,7 @@ const regenerate = () => {
   return (
     <section className="relative flex flex-col h-screen">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto pb-32">
+      <div className="flex-1 overflow-y-auto pb-48">
         <div className="max-w-3xl mx-auto w-full">
 
 
@@ -196,7 +196,7 @@ const regenerate = () => {
       </div>
 
       {/* Input area */}
-      <div className="fixed bottom-0 left-0 w-full bg-background/95 backdrop-blur border-t">
+      <div className="fixed bottom-0 left-0 w-full bg-background/95 backdrop-blur border-t z-50 pb-[env(safe-area-inset-bottom)]">
         <div className="px-4 py-3 sm:px-6">
           {/* Suggestions as chips */}
           {messages.length <= 1 && (
