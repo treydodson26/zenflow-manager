@@ -1,9 +1,38 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import KPITrendCard from "@/components/dashboard/KPITrendCard";
 import StudioCalendar from "@/components/calendar/StudioCalendar";
 import { Card, CardContent } from "@/components/ui/card";
 
 const Dashboard = () => {
+  type Metrics = {
+    active_customers: number | null;
+    class_occupancy_pct: number | null;
+    revenue_this_month: number | null;
+    revenue_change_pct: number | null; // ratio, e.g., 0.08 => +8%
+    retention_rate_pct: number | null;
+  };
+
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+
+  const formatPct = (n: number | null | undefined) => {
+    if (n === null || n === undefined || Number.isNaN(n)) return "—";
+    const val = n <= 1 ? n * 100 : n;
+    return `${Math.round(val)}%`;
+  };
+
+  const formatCurrency = (n: number | null | undefined) => {
+    if (n === null || n === undefined || Number.isNaN(n)) return "—";
+    try { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n); } catch { return `$${n}`; }
+  };
+
+  const formatChange = (ratio: number | null | undefined) => {
+    if (ratio === null || ratio === undefined || !isFinite(ratio)) return undefined;
+    const pct = Math.round(ratio * 100);
+    const sign = pct >= 0 ? "+" : "";
+    return `${sign}${pct}%`;
+  };
+
   useEffect(() => {
     document.title = "Dashboard | Talo Yoga";
     const metaDesc = document.querySelector('meta[name="description"]');
@@ -21,6 +50,20 @@ const Dashboard = () => {
     return () => { document.head.removeChild(script); };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("get-dashboard-metrics");
+        if (error) throw error;
+        if (mounted) setMetrics(data as Metrics);
+      } catch (e) {
+        console.error("Failed to load dashboard metrics", e);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   const trends = useMemo(() => ({
     customers: Array.from({ length: 12 }, (_, i) => ({ x: i, y: 80 + Math.round(Math.random() * 20) })),
     occupancy: Array.from({ length: 12 }, (_, i) => ({ x: i, y: 60 + Math.round(Math.random() * 30) })),
@@ -36,10 +79,10 @@ const Dashboard = () => {
       </section>
 
       <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        <KPITrendCard title="Active Customers" value="123" change="+4%" trend={trends.customers} actionLabel="View Churned Customers" onAction={() => (window.location.href = "/customers")} />
-        <KPITrendCard title="Class Occupancy" value="72%" change="+5%" trend={trends.occupancy} actionLabel="Promote Underfilled Classes" onAction={() => (window.location.href = "/leads")} />
-        <KPITrendCard title="Revenue" value="$8,250" change="+8%" trend={trends.revenue} actionLabel="Send Offer" onAction={() => (window.location.href = "/marketing")} />
-        <KPITrendCard title="Retention Rate" value="84%" change="-1%" trend={trends.retention} actionLabel="Nurture Drop‑offs" onAction={() => (window.location.href = "/segments")} />
+        <KPITrendCard title="Active Customers" value={metrics ? String(metrics.active_customers ?? "—") : "—"} trend={trends.customers} actionLabel="View Churned Customers" onAction={() => (window.location.href = "/customers")} />
+        <KPITrendCard title="Class Occupancy" value={formatPct(metrics?.class_occupancy_pct)} trend={trends.occupancy} actionLabel="Promote Underfilled Classes" onAction={() => (window.location.href = "/leads")} />
+        <KPITrendCard title="Revenue" value={formatCurrency(metrics?.revenue_this_month)} change={formatChange(metrics?.revenue_change_pct)} trend={trends.revenue} actionLabel="Send Offer" onAction={() => (window.location.href = "/marketing")} />
+        <KPITrendCard title="Retention Rate" value={formatPct(metrics?.retention_rate_pct)} trend={trends.retention} actionLabel="Nurture Drop‑offs" onAction={() => (window.location.href = "/segments")} />
       </section>
 
       <section>

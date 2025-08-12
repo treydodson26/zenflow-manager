@@ -35,3 +35,6 @@ verify_jwt = true
 
 [functions.ask-fred]
 verify_jwt = false
+
+[functions.get-dashboard-metrics]
+verify_jwt = false
