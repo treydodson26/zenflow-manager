@@ -22,7 +22,13 @@ const EXAMPLES = [
 export default function HomeChatHero() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: "assistant",
+      content:
+        "Hi, I’m Fred — your studio assistant. Ask anything about customers, attendance, campaigns, or type one of the examples below to get started.",
+    },
+  ]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -140,8 +146,26 @@ const regenerate = () => {
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto pb-32">
         <div className="max-w-3xl mx-auto w-full">
-          {/* Optional header */}
+          {/* Header */}
           <div className="px-4 py-3 text-sm text-muted-foreground">Fred — Studio Assistant</div>
+
+          {/* Empty state with examples */}
+          {messages.length === 1 && messages[0].role === "assistant" && (
+            <div className="px-4 pb-6">
+              <div className="grid gap-2 sm:grid-cols-2 max-w-3xl">
+                {EXAMPLES.map((ex) => (
+                  <button
+                    key={ex}
+                    onClick={() => send(ex)}
+                    className="text-left text-sm p-3 rounded-md border bg-card hover:bg-accent transition-colors"
+                  >
+                    {ex}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
 
           {messages.map((m, i) => {
             const isUser = m.role === "user";
