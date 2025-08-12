@@ -1,10 +1,10 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Mic, Send, Square, RotateCcw } from "lucide-react";
+import { Send, Square, RotateCcw, User, Bot } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 
 interface Message {
@@ -27,6 +27,7 @@ export default function HomeChatHero() {
   const abortRef = useRef<AbortController | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const streamingStopRef = useRef(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const placeholder = useMemo(() => "Ask anything", []);
 
@@ -135,92 +136,99 @@ const regenerate = () => {
 };
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/15 via-accent/10 to-secondary/15 p-6 sm:p-10">
-      <div className="mx-auto w-full max-w-3xl text-center">
-        <p className="text-sm text-muted-foreground mb-2">Fred — Studio Assistant</p>
-        <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">Chat with Fred</h2>
-        <p className="text-muted-foreground mt-2">Plan outreach, analyze attendance, or draft a WhatsApp in one place.</p>
+    <section className="relative flex flex-col h-screen">
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto pb-32">
+        <div className="max-w-3xl mx-auto w-full">
+          {/* Optional header */}
+          <div className="px-4 py-3 text-sm text-muted-foreground">Fred — Studio Assistant</div>
 
-        <div className="mt-6 flex items-center justify-center">
-          <div className="w-full max-w-3xl rounded-full border bg-background shadow-lg">
-            <div className="flex items-center gap-2 px-3 py-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Plus className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem disabled>Add photos & files</DropdownMenuItem>
-                  <DropdownMenuItem disabled>Agent mode</DropdownMenuItem>
-                  <DropdownMenuItem disabled>Use connectors</DropdownMenuItem>
-                  <DropdownMenuItem disabled>Deep research</DropdownMenuItem>
-                  <DropdownMenuItem disabled>Think longer</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+          {messages.map((m, i) => {
+            const isUser = m.role === "user";
+            return (
+              <div key={i} className={isUser ? "bg-muted" : "bg-background"}>
+                <div className="max-w-3xl mx-auto py-6 px-4">
+                  <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-sm flex items-center justify-center border bg-background/80">
+                      {isUser ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
+                    </div>
+                    <div className="flex-1 prose prose-sm max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content || ""}</ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
 
-<Input
-  value={input}
-  onChange={(e) => setInput(e.target.value)}
-  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && !loading && !isStreaming && send()}
-  placeholder={placeholder}
-  className="border-0 focus-visible:ring-0 h-11 flex-1"
-/>
-
-<Button type="button" variant="ghost" size="icon" disabled className="rounded-full">
-  <Mic className="h-5 w-5" />
-</Button>
-{(loading || isStreaming) ? (
-  <Button type="button" size="icon" onClick={stop} className="rounded-full" variant="destructive">
-    <Square className="h-5 w-5" />
-  </Button>
-) : (
-  messages[messages.length - 1]?.role === "assistant" ? (
-    <Button type="button" size="icon" onClick={regenerate} className="rounded-full" variant="ghost" title="Regenerate">
-      <RotateCcw className="h-5 w-5" />
-    </Button>
-  ) : (
-    <Button type="button" size="icon" onClick={() => send()} disabled={loading} className="rounded-full">
-      <Send className="h-5 w-5" />
-    </Button>
-  )
-)}
+          {(loading || isStreaming) && (
+            <div className="bg-background animate-fade-in">
+              <div className="max-w-3xl mx-auto py-6 px-4">
+                <div className="flex gap-4 items-center">
+                  <div className="w-8 h-8 rounded-sm flex items-center justify-center border bg-background/80">
+                    <Bot className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <span className="inline-flex gap-1 text-muted-foreground">
+                      <span className="animate-pulse">•</span>
+                      <span className="animate-pulse [animation-delay:150ms]">•</span>
+                      <span className="animate-pulse [animation-delay:300ms]">•</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
 
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          {EXAMPLES.map((ex) => (
-            <button
-              key={ex}
-              onClick={() => send(ex)}
-              className="text-xs sm:text-sm rounded-full border bg-background/60 px-3 py-1 hover:bg-muted"
-            >
-              {ex}
-            </button>
-          ))}
+          <div ref={scrollRef} />
         </div>
       </div>
 
-      {/* Conversation area */}
-      {messages.length > 0 && (
-        <div className="mx-auto mt-8 w-full max-w-3xl space-y-4">
-          {messages.map((m, i) => (
-            <Card key={i} className={m.role === "user" ? "border-primary/30" : ""}>
-              <div className="px-4 py-3 text-sm whitespace-pre-wrap">
-                <span className="font-medium mr-2">{m.role === "user" ? "You" : "Fred"}:</span>
-                {m.content}
-              </div>
-            </Card>
-          ))}
-          {loading && (
-            <Card>
-              <div className="px-4 py-3 text-sm text-muted-foreground">Thinking…</div>
-            </Card>
-          )}
-          <div ref={scrollRef} />
+      {/* Input area */}
+      <div className="fixed bottom-0 left-0 w-full bg-background border-t">
+        <div className="max-w-3xl mx-auto p-4">
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                const el = e.currentTarget;
+                el.style.height = "auto";
+                el.style.height = Math.min(el.scrollHeight, 200) + "px";
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !loading && !isStreaming) {
+                  e.preventDefault();
+                  send();
+                }
+              }}
+              placeholder={placeholder}
+              className="w-full pr-12 resize-none rounded-xl shadow-sm"
+              rows={1}
+            />
+
+            {/* Action button (send / stop / regenerate) */}
+            <div className="absolute bottom-2 right-2 flex gap-2">
+              {(loading || isStreaming) ? (
+                <Button type="button" size="icon" onClick={stop} className="rounded-full" variant="destructive">
+                  <Square className="h-5 w-5" />
+                </Button>
+              ) : (
+                messages[messages.length - 1]?.role === "assistant" ? (
+                  <Button type="button" size="icon" onClick={regenerate} className="rounded-full" variant="ghost" title="Regenerate">
+                    <RotateCcw className="h-5 w-5" />
+                  </Button>
+                ) : (
+                  <Button type="button" size="icon" onClick={() => send()} disabled={loading} className="rounded-full">
+                    <Send className="h-5 w-5" />
+                  </Button>
+                )
+              )}
+            </div>
+          </div>
         </div>
-      )}
+      </div>
     </section>
   );
 }
