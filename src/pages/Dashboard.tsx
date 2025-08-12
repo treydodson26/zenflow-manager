@@ -89,6 +89,14 @@ const Dashboard = () => {
         <p className="text-muted-foreground mt-1">Pulse of your studio today.</p>
       </section>
 
+      {/* Quick access to Instructor Hub */}
+      <Card className="border bg-muted/40">
+        <CardContent className="py-3 flex items-center justify-between">
+          <span className="text-sm">New: Manage instructors, payroll and coverage in the Instructor Hub.</span>
+          <a href="/instructor-hub" className="story-link text-primary">Open Instructor Hub</a>
+        </CardContent>
+      </Card>
+
       <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <KPITrendCard title="Active Customers" value={metrics ? String(metrics.active_customers ?? "—") : "—"} trend={trends.customers} actionLabel="View Churned Customers" onAction={() => (window.location.href = "/customers")} />
         <KPITrendCard title="Class Occupancy" value={formatPct(metrics?.class_occupancy_pct)} trend={trends.occupancy} actionLabel="Promote Underfilled Classes" onAction={() => (window.location.href = "/leads")} />
