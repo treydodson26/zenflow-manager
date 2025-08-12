@@ -21,7 +21,7 @@ const EXAMPLES = [
   "Suggest a retention campaign for dropped members",
 ];
 
-export default function HomeChatHero() {
+export default function HomeChatHero({ defaultFocus = false }: { defaultFocus?: boolean }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -40,8 +40,14 @@ export default function HomeChatHero() {
 
   const { open, toggleSidebar } = useSidebar();
 
-  const placeholder = useMemo(() => "Ask anything", []);
+  useEffect(() => {
+    if (defaultFocus && open) {
+      toggleSidebar();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultFocus]);
 
+  const placeholder = useMemo(() => "Ask anything", []);
 const send = async (value?: string, options?: { replay?: boolean }) => {
   const text = (value ?? input).trim();
   if (!text) return;
@@ -147,11 +153,16 @@ const regenerate = () => {
 };
 
   return (
-    <section className="relative flex flex-col h-screen">
+    <section className="relative flex flex-col h-screen pt-8 sm:pt-12">
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto pb-48">
         <div className="max-w-3xl mx-auto w-full">
-
+          {messages.length <= 1 && !loading && !isStreaming && (
+            <div className="px-4 pb-3 text-center animate-fade-in">
+              <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">Meet Fred, your AI Studio Assistant</h2>
+              <p className="text-sm text-muted-foreground mt-1">Ask about customers, attendance, or marketing. Try a prompt below.</p>
+            </div>
+          )}
 
           {messages.map((m, i) => {
             const isUser = m.role === "user";
@@ -201,7 +212,7 @@ const regenerate = () => {
                   <button
                     key={ex}
                     onClick={() => send(ex)}
-                    className="px-3 py-1.5 text-sm rounded-full border bg-muted hover:bg-muted/80 transition-colors"
+                    className="px-3 py-1.5 text-sm rounded-full border bg-muted hover:bg-muted/80 transition-colors hover-scale shadow-sm"
                   >
                     {ex}
                   </button>
