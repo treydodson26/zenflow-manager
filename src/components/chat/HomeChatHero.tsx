@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Send, Square, RotateCcw, User, Bot } from "lucide-react";
+import { Send, Square, RotateCcw, User, Bot, Mic } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -10,6 +10,7 @@ import remarkGfm from "remark-gfm";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  ts: number;
 }
 
 const EXAMPLES = [
@@ -26,7 +27,8 @@ export default function HomeChatHero() {
     {
       role: "assistant",
       content:
-        "Hi, I’m Fred — your studio assistant. Ask anything about customers, attendance, campaigns, or type one of the examples below to get started.",
+        "Welcome! I’m Fred, your studio assistant. Ask about customers, attendance, campaigns, or tap a suggestion below to get started.",
+      ts: Date.now(),
     },
   ]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -42,7 +44,7 @@ const send = async (value?: string, options?: { replay?: boolean }) => {
   if (!text) return;
 
   if (!options?.replay) {
-    setMessages((m) => [...m, { role: "user", content: text }]);
+    setMessages((m) => [...m, { role: "user", content: text, ts: Date.now() }]);
   }
   setInput("");
   setLoading(true);
@@ -74,7 +76,7 @@ const send = async (value?: string, options?: { replay?: boolean }) => {
     const reply = (data as any)?.text || (data as any)?.generatedText || "";
 
     // Add assistant placeholder to stream into
-    setMessages((m) => [...m, { role: "assistant", content: "" }]);
+    setMessages((m) => [...m, { role: "assistant", content: "", ts: Date.now() }]);
 
     await new Promise<void>((resolve) => {
       let i = 0;
@@ -146,53 +148,38 @@ const regenerate = () => {
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto pb-32">
         <div className="max-w-3xl mx-auto w-full">
-          {/* Header */}
-          <div className="px-4 py-3 text-sm text-muted-foreground">Fred — Studio Assistant</div>
-
-          {/* Empty state with examples */}
-          {messages.length === 1 && messages[0].role === "assistant" && (
-            <div className="px-4 pb-6">
-              <div className="grid gap-2 sm:grid-cols-2 max-w-3xl">
-                {EXAMPLES.map((ex) => (
-                  <button
-                    key={ex}
-                    onClick={() => send(ex)}
-                    className="text-left text-sm p-3 rounded-md border bg-card hover:bg-accent transition-colors"
-                  >
-                    {ex}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
 
           {messages.map((m, i) => {
             const isUser = m.role === "user";
+            const time = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
             return (
-              <div key={i} className={isUser ? "bg-muted" : "bg-background"}>
-                <div className="max-w-3xl mx-auto py-6 px-4">
-                  <div className="flex gap-4 items-start">
-                    <div className="w-8 h-8 rounded-sm flex items-center justify-center border bg-background/80">
-                      {isUser ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
-                    </div>
-                    <div className="flex-1 prose prose-sm max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content || ""}</ReactMarkdown>
+              <div key={i} className="px-4 py-3">
+                <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] sm:max-w-[70%] rounded-2xl border shadow-sm px-4 py-3 ${isUser ? 'bg-primary/10 border-primary/20' : 'bg-card'}`}>
+                    <div className="flex items-start gap-3">
+                      <div className="shrink-0 w-8 h-8 rounded-full border bg-background/80 flex items-center justify-center">
+                        {isUser ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
+                      </div>
+                      <div className="prose prose-sm max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content || ''}</ReactMarkdown>
+                      </div>
                     </div>
                   </div>
                 </div>
+                <div className={`mt-1 text-xs text-muted-foreground ${isUser ? 'text-right' : 'text-left'}`}>{time}</div>
               </div>
             );
           })}
 
           {(loading || isStreaming) && (
-            <div className="bg-background animate-fade-in">
-              <div className="max-w-3xl mx-auto py-6 px-4">
-                <div className="flex gap-4 items-center">
-                  <div className="w-8 h-8 rounded-sm flex items-center justify-center border bg-background/80">
-                    <Bot className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
+            <div className="px-4 py-3">
+              <div className="flex justify-start">
+                <div className="max-w-[80%] sm:max-w-[70%] rounded-2xl border shadow-sm px-4 py-3 bg-card">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center border bg-background/80">
+                      <Bot className="h-5 w-5" />
+                    </div>
                     <span className="inline-flex gap-1 text-muted-foreground">
                       <span className="animate-pulse">•</span>
                       <span className="animate-pulse [animation-delay:150ms]">•</span>
@@ -209,8 +196,23 @@ const regenerate = () => {
       </div>
 
       {/* Input area */}
-      <div className="fixed bottom-0 left-0 w-full bg-background border-t">
+      <div className="fixed bottom-0 left-0 w-full bg-background/95 backdrop-blur border-t">
         <div className="max-w-3xl mx-auto p-4">
+          {/* Suggestions as chips */}
+          {messages.length <= 1 && (
+            <div className="mb-2 flex flex-wrap gap-2 px-1">
+              {EXAMPLES.map((ex) => (
+                <button
+                  key={ex}
+                  onClick={() => send(ex)}
+                  className="px-3 py-1.5 text-sm rounded-full border bg-muted hover:bg-muted/80 transition-colors"
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="relative">
             <Textarea
               ref={textareaRef}
@@ -228,14 +230,17 @@ const regenerate = () => {
                 }
               }}
               placeholder={placeholder}
-              className="w-full pr-12 resize-none rounded-xl shadow-sm"
+              className="w-full pr-24 resize-none rounded-2xl shadow-sm bg-muted"
               rows={1}
             />
 
-            {/* Action button (send / stop / regenerate) */}
+            {/* Action buttons (mic + send / stop / regenerate) */}
             <div className="absolute bottom-2 right-2 flex gap-2">
+              <Button type="button" size="icon" variant="ghost" className="rounded-full" title="Voice">
+                <Mic className="h-5 w-5" />
+              </Button>
               {(loading || isStreaming) ? (
-                <Button type="button" size="icon" onClick={stop} className="rounded-full" variant="destructive">
+                <Button type="button" size="icon" onClick={stop} className="rounded-full" variant="destructive" title="Stop">
                   <Square className="h-5 w-5" />
                 </Button>
               ) : (
@@ -244,7 +249,7 @@ const regenerate = () => {
                     <RotateCcw className="h-5 w-5" />
                   </Button>
                 ) : (
-                  <Button type="button" size="icon" onClick={() => send()} disabled={loading} className="rounded-full">
+                  <Button type="button" size="icon" onClick={() => send()} disabled={loading} className="rounded-full" title="Send">
                     <Send className="h-5 w-5" />
                   </Button>
                 )
