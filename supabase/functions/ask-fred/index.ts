@@ -1,13 +1,14 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -15,31 +16,9 @@ const supabase = SUPABASE_URL && SERVICE_ROLE_KEY
   ? createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
   : null as any;
 
-async function callOpenAI(body: any) {
-  const resp = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-  const data = await resp.json();
-  return { ok: resp.ok, data };
-}
+const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null as any;
 
-async function continueOpenAI(responseId: string, tool_outputs: any[]) {
-  const resp = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ response_id: responseId, tool_outputs }),
-  });
-  const data = await resp.json();
-  return { ok: resp.ok, data };
-}
+// OpenAI helpers removed; using Anthropic Messages API below.
 
 // Utility helpers for analytics
 function toDate(d: string | Date | null | undefined): Date | null {
@@ -757,9 +736,9 @@ serve(async (req) => {
   }
 
   try {
-    if (!OPENAI_API_KEY) {
+    if (!anthropic) {
       return new Response(
-        JSON.stringify({ error: "Missing OPENAI_API_KEY" }),
+        JSON.stringify({ error: "Missing ANTHROPIC_API_KEY" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -798,10 +777,9 @@ Intent mapping examples (use these to choose analytics metric and args):
 
     const toolDefs = [
       {
-        type: "function",
         name: "get_inactive_customers",
         description: "List customers who have not attended in N days (or never).",
-        parameters: {
+        input_schema: {
           type: "object",
           properties: {
             days: { type: "number", description: "Days since last class" },
@@ -810,10 +788,9 @@ Intent mapping examples (use these to choose analytics metric and args):
         },
       },
       {
-        type: "function",
         name: "get_customers_by_status",
         description: "List customers filtered by status (e.g., prospect, intro_trial, drop_in).",
-        parameters: {
+        input_schema: {
           type: "object",
           properties: {
             status: { type: "string" },
@@ -823,19 +800,17 @@ Intent mapping examples (use these to choose analytics metric and args):
         },
       },
       {
-        type: "function",
         name: "get_top_customers_by_ltv",
         description: "Top customers by lifetime value.",
-        parameters: {
+        input_schema: {
           type: "object",
           properties: { limit: { type: "number" } },
         },
       },
       {
-        type: "function",
         name: "search_customers",
         description: "Search customers by name or email.",
-        parameters: {
+        input_schema: {
           type: "object",
           properties: {
             query: { type: "string" },
@@ -845,10 +820,9 @@ Intent mapping examples (use these to choose analytics metric and args):
         },
       },
       {
-        type: "function",
         name: "get_customers_created_in_month",
         description: "List customers created in a specific month and year (defaults to current year).",
-        parameters: {
+        input_schema: {
           type: "object",
           properties: {
             month: { anyOf: [ { type: "string" }, { type: "number" } ] },
@@ -859,16 +833,14 @@ Intent mapping examples (use these to choose analytics metric and args):
         },
       },
       {
-        type: "function",
         name: "stats_overview",
         description: "Return counts by status for customers.",
-        parameters: { type: "object", properties: {} },
+        input_schema: { type: "object", properties: {} },
       },
       {
-        type: "function",
         name: "analytics",
         description: "Comprehensive analytics over customers. Metrics include: recent_active, inactive_bucket (bucket: '30-60'|'60-90'|'90+'), avg_lifetime, longest_standing, one_time_vs_repeat, retention_by_cohort, early_engaged_inactive, marketing_optins_summary, active_no_marketing, phone_without_sms_optin, marketing_retention_correlation, transactional_not_marketing, contact_info_completeness, classpass_optin_summary, waiver_missing_recent, waiver_overall_rate, recent_no_waiver_7d, waiver_rate_by_tenure, classpass_without_waivers, source_split, age_distribution, upcoming_birthdays_30d, birthdays_by_month, birthday_completion_rate, city_distribution, tag_distribution, missing_fields_overview, missing_phone_counts, incomplete_names, duplicate_emails, duplicate_phones, no_tags_stats, profile_completeness_breakdown, acquisition_by_month, growth_trend, lifetime_stats, milestones_summary, milestones_distribution, registration_by_hour, registration_by_dow, retention_by_source, classpass_conversion_proxy, optin_rates_by_source, waiver_by_source, engagement_duration_by_source, lapsed_with_optins_30_90, regular_but_lapsed_60_90, inactive_birthdays_soon, inactive_channel_reachability, journey_buckets, same_day_vs_returned, contact_info_retention_correlation, seasonal_registration_patterns, first_visit_time_of_day_buckets.",
-        parameters: {
+        input_schema: {
           type: "object",
           properties: {
             metric: { type: "string" },
@@ -881,80 +853,55 @@ Intent mapping examples (use these to choose analytics metric and args):
       },
     ];
 
-    // Initial request
-    let { ok, data } = await callOpenAI({
-      model: "gpt-4o-mini",
-      instructions,
-      input: userQuestion,
-      temperature: 0.2,
-      tools: toolDefs,
-      tool_choice: "auto",
-    });
+    // Run Anthropic Messages API with tools loop
+    const toolLoopMessages: any[] = [
+      { role: "user", content: [{ type: "text", text: userQuestion }] }
+    ];
 
-    if (!ok) {
-      console.error("ask-fred initial call error", data);
-      return new Response(JSON.stringify({ error: data?.error?.message || "OpenAI error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    let finalText = "";
+    for (let i = 0; i < 3; i++) {
+      const resp = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1500,
+        temperature: 0.2,
+        system: instructions,
+        tools: toolDefs as any,
+        messages: toolLoopMessages as any,
       });
-    }
 
-    // Handle tool loop up to 3 iterations
-    let iterations = 0;
-    while (iterations < 3 && data?.required_action?.type === "submit_tool_outputs") {
-      iterations++;
-      const calls = data.required_action.submit_tool_outputs.tool_calls || [];
-      const outputs: any[] = [];
+      const toolUses = (resp.content || []).filter((c: any) => c.type === "tool_use");
+      const textParts = (resp.content || []).filter((c: any) => c.type === "text").map((c: any) => c.text).join("\n").trim();
 
-      for (const call of calls) {
-        const name: ToolName = call.function.name as ToolName;
-        const args = (() => { try { return JSON.parse(call.function.arguments || "{}"); } catch { return {}; } })();
+      if (toolUses.length === 0) {
+        finalText = textParts || finalText;
+        break;
+      }
+
+      // Add assistant content with tool_use calls
+      toolLoopMessages.push({ role: "assistant", content: resp.content as any });
+
+      // Execute tools
+      const toolResults: any[] = [];
+      for (const tu of toolUses as any[]) {
+        const name = tu.name as ToolName;
+        const input = tu.input || {};
         try {
           if (!tools[name]) throw new Error(`Unknown tool: ${name}`);
-          const result = await (tools[name] as any)(args);
-          outputs.push({ tool_call_id: call.id, output: JSON.stringify(result) });
+          const output = await (tools[name] as any)(input);
+          toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(output) });
         } catch (e) {
-          outputs.push({ tool_call_id: call.id, output: JSON.stringify({ error: String(e) }) });
+          toolResults.push({ type: "tool_result", tool_use_id: tu.id, is_error: true, content: String(e) });
         }
       }
-
-      const cont = await continueOpenAI(data.id, outputs);
-      if (!cont.ok) {
-        console.error("ask-fred continuation error", cont.data);
-        return new Response(JSON.stringify({ error: cont.data?.error?.message || "OpenAI error" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      data = cont.data;
+      // Provide results to the model
+      toolLoopMessages.push({ role: "user", content: toolResults as any });
     }
 
-    const extractText = (payload: any): string => {
-      if (payload?.output_text && typeof payload.output_text === "string") return payload.output_text;
-      try {
-        const output = payload?.output || [];
-        for (const item of output) {
-          const contents = item?.content || [];
-          for (const c of contents) {
-            if (c?.type === "output_text" && typeof c?.text === "string") return c.text;
-            if (c?.type === "text" && typeof c?.text === "string") return c.text;
-          }
-        }
-      } catch {}
-      try {
-        const msg = payload?.message || payload?.messages?.[0];
-        const parts = msg?.content || [];
-        for (const p of parts) if (typeof p?.text === "string") return p.text;
-      } catch {}
-      return "";
-    };
-
-    let text: string = extractText(data);
-    if (!text || !text.trim()) {
-      text = "I couldn’t find enough info to answer that. Try being more specific (e.g., ‘inactive for 30 days’, ‘customers created in July 2024’, or ‘prospects named Alex’).";
+    if (!finalText) {
+      finalText = "I couldn’t find enough info to answer that. Try being more specific (e.g., ‘inactive for 30 days’, ‘customers created in July 2024’, or ‘prospects named Alex’).";
     }
 
-    return new Response(JSON.stringify({ text }), {
+    return new Response(JSON.stringify({ text: finalText }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
