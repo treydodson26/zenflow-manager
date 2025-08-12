@@ -26,14 +26,12 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center">
-      <section className="w-full max-w-5xl px-4">
-        <h1 className="sr-only">Chat with Fred — Talo Yoga AI Studio Assistant</h1>
-        <Suspense fallback={<div className="text-sm text-muted-foreground">Loading assistant…</div>}>
-          <HomeChatHero />
-        </Suspense>
-      </section>
-    </div>
+    <main className="min-h-screen">
+      <h1 className="sr-only">Chat with Fred — Talo Yoga AI Studio Assistant</h1>
+      <Suspense fallback={<div className="text-sm text-muted-foreground px-4 py-2">Loading assistant…</div>}>
+        <HomeChatHero />
+      </Suspense>
+    </main>
   );
 };
 
