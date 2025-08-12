@@ -155,7 +155,7 @@ const regenerate = () => {
   return (
     <section className="relative flex flex-col h-screen pt-8 sm:pt-12">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto pb-48">
+      <div className="flex-1 overflow-y-auto pb-32">
         <div className="max-w-3xl mx-auto w-full">
           {messages.length <= 1 && !loading && !isStreaming && (
             <div className="px-4 pb-3 text-center animate-fade-in">
@@ -225,10 +225,10 @@ const regenerate = () => {
       </div>
 
       {/* Input area */}
-      <div className="fixed bottom-0 left-0 w-full bg-background/95 backdrop-blur border-t z-50 pb-[env(safe-area-inset-bottom)]">
+      <div className="fixed bottom-0 left-0 w-full bg-transparent border-0 z-50 pb-[env(safe-area-inset-bottom)]">
         <div className="px-4 py-3 sm:px-6">
-
-          <div className="relative">
+          <div className="max-w-3xl mx-auto">
+            <div className="relative">
             <Textarea
               ref={textareaRef}
               value={input}
@@ -245,7 +245,7 @@ const regenerate = () => {
                 }
               }}
               placeholder={placeholder}
-              className="w-full pr-28 resize-none rounded-2xl shadow bg-muted border border-input py-4 text-base placeholder:text-base"
+              className="w-full pr-28 resize-none rounded-2xl shadow bg-muted border border-input min-h-[44px] sm:min-h-[48px] py-2.5 sm:py-3 text-base placeholder:text-base"
               rows={1}
             />
 
@@ -273,6 +273,7 @@ const regenerate = () => {
                 )
               )}
             </div>
+          </div>
           </div>
         </div>
       </div>
