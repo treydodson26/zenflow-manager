@@ -13,6 +13,8 @@ import Leads from "./pages/Leads";
 import Dashboard from "./pages/Dashboard";
 import ImageStudio from "./pages/ImageStudio";
 import MarketingHub from "./pages/MarketingHub";
+import InstructorHub from "./pages/InstructorHub";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -30,6 +32,7 @@ const App = () => (
             <Route path="/leads" element={<Leads />} />
             <Route path="/images" element={<ImageStudio />} />
             <Route path="/marketing" element={<MarketingHub />} />
+            <Route path="/instructor-hub" element={<InstructorHub />} />
             <Route path="/customer/:id" element={<CustomerDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

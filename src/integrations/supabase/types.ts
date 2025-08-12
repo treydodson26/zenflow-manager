@@ -354,6 +354,54 @@ export type Database = {
           },
         ]
       }
+      contractors: {
+        Row: {
+          base_rate: number
+          certification_level: string | null
+          created_at: string
+          email: string | null
+          emergency_contact: Json | null
+          id: string
+          is_active: boolean
+          is_substitute: boolean
+          name: string
+          per_student_fee: number
+          phone: string | null
+          specializations: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          base_rate?: number
+          certification_level?: string | null
+          created_at?: string
+          email?: string | null
+          emergency_contact?: Json | null
+          id?: string
+          is_active?: boolean
+          is_substitute?: boolean
+          name: string
+          per_student_fee?: number
+          phone?: string | null
+          specializations?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          base_rate?: number
+          certification_level?: string | null
+          created_at?: string
+          email?: string | null
+          emergency_contact?: Json | null
+          id?: string
+          is_active?: boolean
+          is_substitute?: boolean
+          name?: string
+          per_student_fee?: number
+          phone?: string | null
+          specializations?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       csv_imports: {
         Row: {
           completed_at: string | null
@@ -822,6 +870,91 @@ export type Database = {
           },
         ]
       }
+      instructor_certifications: {
+        Row: {
+          certification_type: string
+          created_at: string
+          expires_at: string | null
+          file_url: string | null
+          id: string
+          instructor_id: string
+          issued_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          certification_type: string
+          created_at?: string
+          expires_at?: string | null
+          file_url?: string | null
+          id?: string
+          instructor_id: string
+          issued_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          certification_type?: string
+          created_at?: string
+          expires_at?: string | null
+          file_url?: string | null
+          id?: string
+          instructor_id?: string
+          issued_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructor_certifications_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructor_schedule: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          day_of_week: number | null
+          id: string
+          instructor_id: string
+          is_recurring: boolean
+          status: string
+          time: string | null
+          updated_at: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          day_of_week?: number | null
+          id?: string
+          instructor_id: string
+          is_recurring?: boolean
+          status?: string
+          time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          day_of_week?: number | null
+          id?: string
+          instructor_id?: string
+          is_recurring?: boolean
+          status?: string
+          time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructor_schedule_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           assigned_to: string | null
@@ -960,6 +1093,59 @@ export type Database = {
         }
         Relationships: []
       }
+      payroll: {
+        Row: {
+          base_pay: number
+          classes_taught: number
+          created_at: string
+          id: string
+          instructor_id: string
+          paid_date: string | null
+          pay_period: string
+          status: string
+          student_pay: number
+          total_pay: number
+          total_students: number
+          updated_at: string
+        }
+        Insert: {
+          base_pay?: number
+          classes_taught?: number
+          created_at?: string
+          id?: string
+          instructor_id: string
+          paid_date?: string | null
+          pay_period: string
+          status?: string
+          student_pay?: number
+          total_pay?: number
+          total_students?: number
+          updated_at?: string
+        }
+        Update: {
+          base_pay?: number
+          classes_taught?: number
+          created_at?: string
+          id?: string
+          instructor_id?: string
+          paid_date?: string | null
+          pay_period?: string
+          status?: string
+          student_pay?: number
+          total_pay?: number
+          total_students?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       segment_analytics: {
         Row: {
           conversions: number
@@ -995,6 +1181,63 @@ export type Database = {
           total_customers?: number
         }
         Relationships: []
+      }
+      substitute_requests: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          original_instructor_id: string | null
+          request_time: string
+          required_certification: string | null
+          response_time: string | null
+          status: string
+          substitute_instructor_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          original_instructor_id?: string | null
+          request_time?: string
+          required_certification?: string | null
+          response_time?: string | null
+          status?: string
+          substitute_instructor_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          original_instructor_id?: string | null
+          request_time?: string
+          required_certification?: string | null
+          response_time?: string | null
+          status?: string
+          substitute_instructor_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "substitute_requests_original_instructor_id_fkey"
+            columns: ["original_instructor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "substitute_requests_substitute_instructor_id_fkey"
+            columns: ["substitute_instructor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_rate_limits: {
         Row: {

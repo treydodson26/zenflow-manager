@@ -16,7 +16,7 @@ const opsItems = [
   { title: "Home", url: "/", icon: LayoutDashboard },
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Customers", url: "/customers", icon: Users },
-  { title: "Instructor Hub", url: "/instructors", icon: GraduationCap },
+  { title: "Instructor Hub", url: "/instructor-hub", icon: GraduationCap },
   { title: "CSV Import", url: "/import", icon: Upload },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
