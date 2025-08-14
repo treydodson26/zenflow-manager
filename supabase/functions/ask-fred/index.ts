@@ -764,42 +764,33 @@ const tools = {
   async generate_image(params: { prompt: string; size?: string; quality?: string; style?: string }) {
     console.log("🎨 Generating image with prompt:", params.prompt);
     
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiApiKey) {
-      throw new Error("OpenAI API key not configured - please add OPENAI_API_KEY to Supabase secrets");
-    }
+    try {
+      const response = await supabase.functions.invoke('generate-image', {
+        body: {
+          prompt: params.prompt,
+          size: params.size || '1024x1024',
+          quality: params.quality || 'high',
+          output_format: 'png'
+        }
+      });
 
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: params.prompt,
-        n: 1,
+      if (response.error) {
+        console.log(`❌ Image generation error: ${JSON.stringify(response.error, null, 2)}`);
+        throw new Error(`Image generation failed: ${response.error.message || 'Unknown error'}`);
+      }
+      
+      console.log("✅ Image generated successfully");
+      
+      return {
+        image_url: response.data.image,
+        prompt: response.data.usedPrompt || params.prompt,
         size: params.size || '1024x1024',
-        quality: params.quality || 'high',
-        output_format: 'png'
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("❌ Image generation error:", error);
-      throw new Error(`Image generation failed: ${error}`);
+        quality: params.quality || 'high'
+      };
+    } catch (error) {
+      console.log(`❌ Image generation error: ${error.message}`);
+      throw error;
     }
-
-    const data = await response.json();
-    console.log("✅ Image generated successfully");
-    
-    return {
-      image_url: data.data[0].url || `data:image/png;base64,${data.data[0].b64_json}`,
-      prompt: params.prompt,
-      size: params.size || '1024x1024',
-      quality: params.quality || 'high'
-    };
   },
 };
 
