@@ -4,6 +4,7 @@ import KPITrendCard from "@/components/dashboard/KPITrendCard";
 import StudioCalendar from "@/components/calendar/StudioCalendar";
 import { Card, CardContent } from "@/components/ui/card";
 import StatCard from "@/components/dashboard/StatCard";
+import { DashboardSkeleton, ErrorState } from "@/components/ui/loading-skeletons";
 
 const Dashboard = () => {
   type Metrics = {
@@ -26,6 +27,8 @@ const Dashboard = () => {
   };
 
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const formatPct = (n: number | null | undefined) => {
     if (n === null || n === undefined || Number.isNaN(n)) return "—";
@@ -71,11 +74,16 @@ const Dashboard = () => {
     let mounted = true;
     (async () => {
       try {
+        setLoading(true);
+        setError(null);
         const { data, error } = await supabase.functions.invoke("get-dashboard-metrics");
         if (error) throw error;
         if (mounted) setMetrics(data as Metrics);
       } catch (e) {
         console.error("Failed to load dashboard metrics", e);
+        if (mounted) setError("Failed to load dashboard metrics. Please try again.");
+      } finally {
+        if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
@@ -88,6 +96,23 @@ const Dashboard = () => {
     revenue: [],
     retention: []
   }, [metrics]);
+
+  const retryLoadMetrics = () => {
+    setError(null);
+    setLoading(true);
+    // Trigger the useEffect again by updating a dependency
+    window.location.reload();
+  };
+
+  // Show loading state
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
+
+  // Show error state
+  if (error) {
+    return <ErrorState title="Dashboard Error" message={error} onRetry={retryLoadMetrics} />;
+  }
 
   return (
     <div className="space-y-6 lg:space-y-8">

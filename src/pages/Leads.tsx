@@ -7,6 +7,7 @@ import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
 import StatCard from "@/components/dashboard/StatCard";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { LeadsDashboardSkeleton, ErrorState, EmptyState } from "@/components/ui/loading-skeletons";
 
 // SEO helper
 function ensureMeta(name: string, content: string) {
@@ -42,6 +43,8 @@ export default function Leads() {
   const [timeframe, setTimeframe] = useState("all");
   const [program, setProgram] = useState("all");
   const [dayFilter, setDayFilter] = useState<string>("all");
+  const [loading, setLoading] = useState(false); // Set to false since using mock data
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -80,6 +83,16 @@ export default function Leads() {
       { id: "4", name: "Noah Garcia", email: "noah.garcia@example.com", type: "intro", introDays: 21, lastClass: "2025-08-01" },
     ]
   ), []);
+
+  // Show loading state
+  if (loading) {
+    return <LeadsDashboardSkeleton />;
+  }
+
+  // Show error state
+  if (error) {
+    return <ErrorState title="Pipeline Error" message={error} onRetry={() => setError(null)} />;
+  }
 
   return (
     <main className="space-y-6">
@@ -217,30 +230,43 @@ export default function Leads() {
         </TabsContent>
 
         <TabsContent value="lead-list">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {leads.map((l) => (
-              <Card key={l.id} className="animate-fade-in">
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-foreground">{l.name}</div>
-                      <div className="text-sm text-muted-foreground">{l.email}</div>
+          {leads.length === 0 ? (
+            <EmptyState
+              title="No leads found"
+              message="No leads match your current filters."
+              actionLabel="Reset filters"
+              onAction={() => {
+                setTimeframe("all");
+                setProgram("all");
+                setDayFilter("all");
+              }}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {leads.map((l) => (
+                <Card key={l.id} className="animate-fade-in">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-foreground">{l.name}</div>
+                        <div className="text-sm text-muted-foreground">{l.email}</div>
+                      </div>
+                      <div className="text-xs text-muted-foreground text-right">
+                        {l.type === "intro" && <div>Days in Intro: <span className="font-medium">{l.introDays}</span></div>}
+                        <div>Last Class: <span className="font-medium">{l.lastClass ? new Date(l.lastClass).toLocaleDateString() : "—"}</span></div>
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground text-right">
-                      {l.type === "intro" && <div>Days in Intro: <span className="font-medium">{l.introDays}</span></div>}
-                      <div>Last Class: <span className="font-medium">{l.lastClass ? new Date(l.lastClass).toLocaleDateString() : "—"}</span></div>
+                    <div className="flex gap-2 pt-2">
+                      {l.type === "prospect" && (
+                        <Button size="sm" onClick={() => toast({ title: "Day 0 Email queued", description: `Email prepared for ${l.name}` })}>Send Day 0 Email</Button>
+                      )}
+                      <Button size="sm" variant="secondary" onClick={() => toast({ title: "WhatsApp sent", description: `Message sent to ${l.name}` })}>Send WhatsApp</Button>
                     </div>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    {l.type === "prospect" && (
-                      <Button size="sm" onClick={() => toast({ title: "Day 0 Email queued", description: `Email prepared for ${l.name}` })}>Send Day 0 Email</Button>
-                    )}
-                    <Button size="sm" variant="secondary" onClick={() => toast({ title: "WhatsApp sent", description: `Message sent to ${l.name}` })}>Send WhatsApp</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="dropin">

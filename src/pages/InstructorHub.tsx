@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import { CalendarDays, DollarSign, Users, AlertTriangle, Download, SendHorizontal, Bot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { InstructorHubSkeleton, ErrorState } from "@/components/ui/loading-skeletons";
 
 // Minimal Instructor Hub scaffolding with realtime-ready priority feed and payroll action
 export default function InstructorHub() {
@@ -19,14 +20,23 @@ export default function InstructorHub() {
     "Payroll calculation due in 2 days",
   ]);
   const [payrollRows, setPayrollRows] = useState<Array<{ name: string; classes: number; students: number; total: number }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // SEO
+  // SEO and initial loading
   useEffect(() => {
     document.title = "Instructor Hub – Talo Yoga";
     const link = document.querySelector('link[rel="canonical"]') || document.createElement("link");
     link.setAttribute("rel", "canonical");
     link.setAttribute("href", window.location.origin + "/instructor-hub");
     if (!link.parentNode) document.head.appendChild(link);
+    
+    // Simulate loading
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 800);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   // Supabase realtime: listen for coverage/substitute events
@@ -69,6 +79,16 @@ export default function InstructorHub() {
     }
     return arr;
   }, []);
+
+  // Show loading state
+  if (loading) {
+    return <InstructorHubSkeleton />;
+  }
+
+  // Show error state
+  if (error) {
+    return <ErrorState title="Instructor Hub Error" message={error} onRetry={() => setError(null)} />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

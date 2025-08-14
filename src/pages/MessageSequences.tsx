@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { Save, Plus, Trash2, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { MessageSequencesSkeleton, ErrorState, EmptyState } from "@/components/ui/loading-skeletons";
 
 interface MessageSequence {
   id: number;
@@ -27,6 +28,7 @@ const MessageSequences = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = "Message Sequences | Talo Yoga";
@@ -53,8 +55,9 @@ const MessageSequences = () => {
           description: "Message sequences updated from database",
         });
       }
-    } catch (error) {
-      console.error('Error fetching sequences:', error);
+    } catch (err) {
+      console.error('Error fetching sequences:', err);
+      setError("Failed to load message sequences from the database.");
       toast({
         title: "Error",
         description: "Failed to load message sequences",
@@ -114,11 +117,18 @@ const MessageSequences = () => {
   };
 
   if (loading) {
+    return <MessageSequencesSkeleton />;
+  }
+
+  // Show error state
+  if (error) {
     return (
       <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-lg text-muted-foreground">Loading message sequences...</div>
-        </div>
+        <ErrorState 
+          title="Failed to Load Sequences" 
+          message="Unable to load message sequences from the database."
+          onRetry={() => fetchSequences()}
+        />
       </div>
     );
   }
@@ -279,11 +289,13 @@ const MessageSequences = () => {
 
         {sequences.length === 0 && (
           <Card>
-            <CardContent className="text-center py-12">
-              <div className="text-muted-foreground">
-                <p className="text-lg mb-2">No message sequences found</p>
-                <p className="text-sm">Message sequences will appear here when they're created</p>
-              </div>
+            <CardContent className="py-12">
+              <EmptyState
+                title="No message sequences found"
+                message="Message sequences will appear here when they're created."
+                actionLabel="Refresh"
+                onAction={() => fetchSequences(true)}
+              />
             </CardContent>
           </Card>
         )}

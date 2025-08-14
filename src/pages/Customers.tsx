@@ -4,6 +4,7 @@ import CustomerCard, { GalleryCustomer } from "@/components/customers/CustomerCa
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import IntroOffers from "./IntroOffers";
 import ImportArketa from "./ImportArketa";
+import { CustomerGridSkeleton, ErrorState, EmptyState } from "@/components/ui/loading-skeletons";
 
 function ensureMeta(name: string, content: string) {
   let el = document.querySelector(`meta[name="${name}"]`);
@@ -29,6 +30,8 @@ type Filter = "all" | "intro" | "active" | "attention";
 export default function CustomersGallery() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [loading, setLoading] = useState(false); // Since we're using mock data, set to false
+  const [error, setError] = useState<string | null>(null);
 
   // SEO
   useEffect(() => {
@@ -122,27 +125,29 @@ export default function CustomersGallery() {
             </div>
           </div>
 
+          {/* Loading state */}
+          {loading && <CustomerGridSkeleton rows={8} />}
+
+          {/* Error state */}
+          {error && <ErrorState title="Failed to load prospects" message={error} />}
+
           {/* Grid */}
-          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {prospects.map((s) => (
-              <CustomerCard key={s.id} customer={s} onMessage={handleMessage} onMore={handleMoreOptions} />
-            ))}
-          </section>
+          {!loading && !error && (
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {prospects.map((s) => (
+                <CustomerCard key={s.id} customer={s} onMessage={handleMessage} onMore={handleMoreOptions} />
+              ))}
+            </section>
+          )}
 
           {/* Empty state */}
-          {prospects.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
-              <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
-                <UsersIcon className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-medium text-foreground mb-2">No prospects found</h3>
-              <p className="text-sm text-muted-foreground text-center max-w-sm">
-                {searchTerm ? `No prospects match "${searchTerm}"` : "Try a different search"}
-              </p>
-              <button onClick={clearSearch} className="mt-4 px-4 py-2 text-sm text-primary hover:underline">
-                Clear search
-              </button>
-            </div>
+          {!loading && !error && prospects.length === 0 && (
+            <EmptyState
+              title="No prospects found"
+              message={searchTerm ? `No prospects match "${searchTerm}"` : "No prospects to display"}
+              actionLabel="Clear search"
+              onAction={clearSearch}
+            />
           )}
         </TabsContent>
 
@@ -170,27 +175,29 @@ export default function CustomersGallery() {
             </div>
           </div>
 
+          {/* Loading state */}
+          {loading && <CustomerGridSkeleton rows={8} />}
+
+          {/* Error state */}
+          {error && <ErrorState title="Failed to load drop-ins" message={error} />}
+
           {/* Grid */}
-          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {dropins.map((s) => (
-              <CustomerCard key={s.id} customer={s} onMessage={handleMessage} onMore={handleMoreOptions} />
-            ))}
-          </section>
+          {!loading && !error && (
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {dropins.map((s) => (
+                <CustomerCard key={s.id} customer={s} onMessage={handleMessage} onMore={handleMoreOptions} />
+              ))}
+            </section>
+          )}
 
           {/* Empty state */}
-          {dropins.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
-              <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
-                <UsersIcon className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-medium text-foreground mb-2">No drop-ins found</h3>
-              <p className="text-sm text-muted-foreground text-center max-w-sm">
-                {searchTerm ? `No drop-ins match "${searchTerm}"` : "Try a different search"}
-              </p>
-              <button onClick={clearSearch} className="mt-4 px-4 py-2 text-sm text-primary hover:underline">
-                Clear search
-              </button>
-            </div>
+          {!loading && !error && dropins.length === 0 && (
+            <EmptyState
+              title="No drop-ins found"
+              message={searchTerm ? `No drop-ins match "${searchTerm}"` : "No drop-in customers to display"}
+              actionLabel="Clear search"
+              onAction={clearSearch}
+            />
           )}
         </TabsContent>
 

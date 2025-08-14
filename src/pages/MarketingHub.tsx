@@ -1,7 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import ImageStudio from "./ImageStudio";
+import { MarketingHubSkeleton, ErrorState } from "@/components/ui/loading-skeletons";
 
 const MarketingHub = () => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     // SEO: title, meta description, canonical, structured data
     document.title = "Marketing Hub – AI Image Generator | Talo Yoga";
@@ -25,11 +29,27 @@ const MarketingHub = () => {
     });
     document.head.appendChild(ld);
 
+    // Simulate loading
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 800);
+
     return () => {
       document.head.removeChild(canonical);
       document.head.removeChild(ld);
+      clearTimeout(timer);
     };
   }, []);
+
+  // Show loading state
+  if (loading) {
+    return <MarketingHubSkeleton />;
+  }
+
+  // Show error state
+  if (error) {
+    return <ErrorState title="Marketing Hub Error" message={error} />;
+  }
 
   return (
     <main className="container mx-auto py-6">

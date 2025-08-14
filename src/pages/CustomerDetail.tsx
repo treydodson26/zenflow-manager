@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight, AlertTriangle, Send, Users, Tag, Edit3 } from "lucide-react";
 import CustomerAIChat from "@/components/chat/CustomerAIChat";
+import { CustomerDetailSkeleton, ErrorState } from "@/components/ui/loading-skeletons";
 
 // Mock data until real data is wired
 const MOCK = {
@@ -76,7 +77,19 @@ const MOCK = {
 
 function useCustomerMock(id?: string) {
   // In future: fetch with Supabase using id
-  return MOCK;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Simulate loading
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [id]);
+  
+  return { customer: MOCK, loading, error };
 }
 
 function formatCurrency(n: number) {
@@ -112,7 +125,17 @@ function EngagementDots({ level }: { level: "high" | "medium" | "low" }) {
 
 export default function CustomerDetail() {
   const { id } = useParams();
-  const customer = useCustomerMock(id);
+  const { customer, loading, error } = useCustomerMock(id);
+
+  // Show loading state
+  if (loading) {
+    return <CustomerDetailSkeleton />;
+  }
+
+  // Show error state
+  if (error) {
+    return <ErrorState title="Customer Not Found" message="Failed to load customer details." />;
+  }
 
   const fullName = `${customer.first_name} ${customer.last_name}`;
 
