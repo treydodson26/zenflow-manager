@@ -144,23 +144,53 @@ const tools = {
     return data;
   },
   async stats_overview() {
-    // Fetch statuses and compute counts client-side to avoid raw SQL aggregates
+    console.log("🔍 Fetching customer status overview...");
+    
+    // Get total count first
+    const { count: totalCount, error: countError } = await supabase
+      .from("customers")
+      .select("*", { count: 'exact', head: true });
+    
+    if (countError) {
+      console.error("❌ Error getting total count:", countError);
+      throw countError;
+    }
+    
+    console.log(`📊 Total customers in database: ${totalCount}`);
+    
+    // Fetch all customer statuses (not limited to 5000)
     const { data, error } = await supabase
       .from("customers")
-      .select("status")
-      .limit(5000);
-    if (error) throw error;
+      .select("status");
+      
+    if (error) {
+      console.error("❌ Error fetching customer statuses:", error);
+      throw error;
+    }
+    
+    console.log(`📥 Fetched ${data?.length || 0} customer records`);
+    
     const counts: Record<string, number> = {};
     for (const row of data || []) {
       const s = (row.status || "unknown").toString();
       counts[s] = (counts[s] || 0) + 1;
     }
-    return counts;
+    
+    console.log("📈 Status counts:", counts);
+    
+    return { 
+      total_customers: totalCount,
+      status_breakdown: counts,
+      fetched_records: data?.length || 0 
+    };
   },
   async analytics(params: { metric: string; periodDays?: number; bucket?: string; limit?: number }) {
     const metric = String(params?.metric || '').toLowerCase();
     const limit = Math.max(1, Math.min(500, Number(params?.limit) || 100));
-    // Pull required fields once
+    
+    console.log(`🔍 Running analytics for metric: ${metric}`);
+    
+    // Pull required fields - remove artificial limit for analytics
     const { data, error } = await supabase
       .from('customers')
       .select(`
@@ -168,9 +198,14 @@ const tools = {
         birthday, tags, first_seen, last_seen, created_at, status,
         marketing_email_opt_in, marketing_text_opt_in, transactional_text_opt_in,
         agree_to_liability_waiver, pre_arketa_milestone_count, total_lifetime_value
-      `)
-      .limit(5000);
-    if (error) throw error;
+      `);
+      
+    console.log(`📥 Analytics fetched ${data?.length || 0} customer records for ${metric}`);
+    
+    if (error) {
+      console.error("❌ Analytics error:", error);
+      throw error;
+    }
     const now = new Date();
     const rows = (data || []).map((r: any) => ({ ...r,
       first_seen: toDate(r.first_seen),
