@@ -781,8 +781,7 @@ const tools = {
         n: 1,
         size: params.size || '1024x1024',
         quality: params.quality || 'high',
-        output_format: 'png',
-        response_format: 'b64_json'
+        output_format: 'png'
       }),
     });
 
@@ -796,7 +795,7 @@ const tools = {
     console.log("✅ Image generated successfully");
     
     return {
-      image_url: `data:image/png;base64,${data.data[0].b64_json}`,
+      image_url: data.data[0].url || `data:image/png;base64,${data.data[0].b64_json}`,
       prompt: params.prompt,
       size: params.size || '1024x1024',
       quality: params.quality || 'high'
