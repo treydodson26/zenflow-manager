@@ -17,21 +17,14 @@ interface Message {
 const EXAMPLES = [
   "Draft a Day 7 message for an intro client",
   "Summarize yesterday's attendance",
-  "Who hasn’t booked since last month?",
+  "Who hasn't booked since last month?",
   "Suggest a retention campaign for dropped members",
 ];
 
 export default function HomeChatHero({ defaultFocus = false }: { defaultFocus?: boolean }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content:
-        "Welcome! I’m Fred, your studio assistant. Ask about customers, attendance, campaigns, or tap a suggestion below to get started.",
-      ts: Date.now(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -153,84 +146,18 @@ const regenerate = () => {
 };
 
   return (
-    <section className="relative flex flex-col h-screen pt-8 sm:pt-12 bg-gradient-to-br from-background via-secondary to-primary/20">
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto pb-40">
-        <div className="max-w-3xl mx-auto w-full">
-          {messages.length <= 1 && !loading && !isStreaming && (
-            <div className="px-4 pb-6 text-center animate-fade-in">
-              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground mb-3">
-                Meet Fred, Emily's AI Studio Assistant
-              </h1>
-              <p className="text-lg sm:text-xl text-muted-foreground mb-8">Manage customers, automate communications, and grow your yoga studio</p>
-            </div>
-          )}
-
-          {messages.map((m, i) => {
-            const isUser = m.role === "user";
-            const time = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-            return (
-              <div key={i} className="px-4 py-3 group animate-fade-in">
-                <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] sm:max-w-[70%] rounded-2xl border px-4 py-3 ${isUser ? 'bg-primary text-primary-foreground border-primary shadow' : 'bg-muted/60 border-border shadow-sm'}`}>
-                    <div className="flex items-start gap-3">
-                      <div className="shrink-0 w-8 h-8 rounded-full border bg-background/80 flex items-center justify-center">
-                        {isUser ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
-                      </div>
-                      <div className="prose prose-sm max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content || ''}</ReactMarkdown>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className={`mt-1 text-xs text-muted-foreground ${isUser ? 'text-right' : 'text-left'} opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>{time}</div>
-              </div>
-            );
-          })}
-
-          {(loading || isStreaming) && (
-            <div className="px-4 py-3">
-              <div className="flex justify-start">
-                <div className="max-w-[80%] sm:max-w-[70%] rounded-2xl border shadow-sm px-4 py-3 bg-muted/60 border-border">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center border bg-background/80">
-                      <Bot className="h-5 w-5" />
-                    </div>
-                    <span className="inline-flex gap-1 text-muted-foreground">
-                      <span className="animate-pulse">•</span>
-                      <span className="animate-pulse [animation-delay:150ms]">•</span>
-                      <span className="animate-pulse [animation-delay:300ms]">•</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {messages.length <= 1 && !loading && !isStreaming && (
-            <div className="px-4 py-3 animate-fade-in">
-              <div className="flex flex-wrap gap-2 justify-center">
-                {EXAMPLES.map((ex) => (
-                  <button
-                    key={ex}
-                    onClick={() => send(ex)}
-                    className="px-3 py-1.5 text-sm rounded-full border bg-card/60 hover:bg-card/80 transition-colors hover-scale shadow-sm text-foreground border-border"
-                  >
-                    {ex}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <div ref={scrollRef} />
-        </div>
-      </div>
-
-      {/* Input area */}
-      <div className="fixed bottom-0 left-0 w-full bg-transparent border-0 z-50 pb-[env(safe-area-inset-bottom)]">
-        <div className="px-4 py-3 sm:px-6">
-          <div className="flex justify-center">
-            <div className="relative w-full max-w-2xl">
+    <section className="relative flex flex-col h-screen bg-gradient-to-br from-background via-secondary to-primary/20">
+      {/* When no messages, center everything */}
+      {messages.length === 0 && !loading && !isStreaming && (
+        <div className="flex-1 flex flex-col justify-center items-center px-4">
+          <div className="text-center animate-fade-in mb-8">
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground mb-3">
+              Meet Fred, Emily's AI Studio Assistant
+            </h1>
+            <p className="text-lg sm:text-xl text-muted-foreground mb-8">Manage customers, automate communications, and grow your yoga studio</p>
+          </div>
+          
+          <div className="relative w-full max-w-2xl mb-8">
             <Textarea
               ref={textareaRef}
               value={input}
@@ -251,7 +178,7 @@ const regenerate = () => {
               rows={3}
             />
 
-            {/* Action buttons (focus, mic + send / stop / regenerate) */}
+            {/* Action buttons */}
             <div className="absolute bottom-2 right-2 flex gap-2">
               <Button type="button" size="icon" variant="ghost" className="rounded-full" title={open ? "Exit focus mode" : "Focus mode"} onClick={toggleSidebar}>
                 {open ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
@@ -264,21 +191,135 @@ const regenerate = () => {
                   <Square className="h-5 w-5" />
                 </Button>
               ) : (
-                messages[messages.length - 1]?.role === "assistant" ? (
-                  <Button type="button" size="icon" onClick={regenerate} className="rounded-full" variant="ghost" title="Regenerate">
-                    <RotateCcw className="h-5 w-5" />
-                  </Button>
-                ) : (
-                  <Button type="button" size="icon" onClick={() => send()} disabled={loading} className="rounded-full" title="Send">
-                    <Send className="h-5 w-5" />
-                  </Button>
-                )
-              )}
+                <Button type="button" size="icon" onClick={() => send()} disabled={loading} className="rounded-full" title="Send">
+                  <Send className="h-5 w-5" />
+                </Button>
+              )
+              }
             </div>
           </div>
+
+          <div className="animate-fade-in">
+            <div className="flex flex-wrap gap-2 justify-center">
+              {EXAMPLES.map((ex) => (
+                <button
+                  key={ex}
+                  onClick={() => send(ex)}
+                  className="px-3 py-1.5 text-sm rounded-full border bg-card/60 hover:bg-card/80 transition-colors hover-scale shadow-sm text-foreground border-border"
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* When there are messages, show the chat interface */}
+      {(messages.length > 0 || loading || isStreaming) && (
+        <>
+          {/* Messages area */}
+          <div className="flex-1 overflow-y-auto pb-40 pt-8 sm:pt-12">
+            <div className="max-w-3xl mx-auto w-full">
+              {messages.map((m, i) => {
+                const isUser = m.role === "user";
+                const time = new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                return (
+                  <div key={i} className="px-4 py-3 group animate-fade-in">
+                    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[80%] sm:max-w-[70%] rounded-2xl border px-4 py-3 ${isUser ? 'bg-primary text-primary-foreground border-primary shadow' : 'bg-muted/60 border-border shadow-sm'}`}>
+                        <div className="flex items-start gap-3">
+                          <div className="shrink-0 w-8 h-8 rounded-full border bg-background/80 flex items-center justify-center">
+                            {isUser ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
+                          </div>
+                          <div className="prose prose-sm max-w-none">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content || ''}</ReactMarkdown>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className={`mt-1 text-xs text-muted-foreground ${isUser ? 'text-right' : 'text-left'} opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>{time}</div>
+                  </div>
+                );
+              })}
+
+              {(loading || isStreaming) && (
+                <div className="px-4 py-3">
+                  <div className="flex justify-start">
+                    <div className="max-w-[80%] sm:max-w-[70%] rounded-2xl border shadow-sm px-4 py-3 bg-muted/60 border-border">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center border bg-background/80">
+                          <Bot className="h-5 w-5" />
+                        </div>
+                        <span className="inline-flex gap-1 text-muted-foreground">
+                          <span className="animate-pulse">•</span>
+                          <span className="animate-pulse [animation-delay:150ms]">•</span>
+                          <span className="animate-pulse [animation-delay:300ms]">•</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={scrollRef} />
+            </div>
+          </div>
+
+          {/* Input area */}
+          <div className="fixed bottom-0 left-0 w-full bg-transparent border-0 z-50 pb-[env(safe-area-inset-bottom)]">
+            <div className="px-4 py-3 sm:px-6">
+              <div className="flex justify-center">
+                <div className="relative w-full max-w-2xl">
+                <Textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    const el = e.currentTarget;
+                    el.style.height = "auto";
+                    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey && !loading && !isStreaming) {
+                      e.preventDefault();
+                      send();
+                    }
+                  }}
+                  placeholder={placeholder}
+                  className="w-full pr-28 resize-none rounded-2xl shadow bg-white/95 backdrop-blur border border-white/20 min-h-[80px] py-4 text-base placeholder:text-base"
+                  rows={3}
+                />
+
+                {/* Action buttons */}
+                <div className="absolute bottom-2 right-2 flex gap-2">
+                  <Button type="button" size="icon" variant="ghost" className="rounded-full" title={open ? "Exit focus mode" : "Focus mode"} onClick={toggleSidebar}>
+                    {open ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
+                  </Button>
+                  <Button type="button" size="icon" variant="ghost" className="rounded-full" title="Voice">
+                    <Mic className="h-5 w-5" />
+                  </Button>
+                  {(loading || isStreaming) ? (
+                    <Button type="button" size="icon" onClick={stop} className="rounded-full" variant="destructive" title="Stop">
+                      <Square className="h-5 w-5" />
+                    </Button>
+                  ) : (
+                    messages[messages.length - 1]?.role === "assistant" ? (
+                      <Button type="button" size="icon" onClick={regenerate} className="rounded-full" variant="ghost" title="Regenerate">
+                        <RotateCcw className="h-5 w-5" />
+                      </Button>
+                    ) : (
+                      <Button type="button" size="icon" onClick={() => send()} disabled={loading} className="rounded-full" title="Send">
+                        <Send className="h-5 w-5" />
+                      </Button>
+                    )
+                  )}
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </section>
   );
 }
