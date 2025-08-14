@@ -761,6 +761,46 @@ const tools = {
 
     return resp;
   },
+  async generate_image(params: { prompt: string; size?: string; quality?: string; style?: string }) {
+    console.log("🎨 Generating image with prompt:", params.prompt);
+    
+    if (!ANTHROPIC_API_KEY) {
+      throw new Error("OpenAI API key not configured");
+    }
+
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-image-1',
+        prompt: params.prompt,
+        n: 1,
+        size: params.size || '1024x1024',
+        quality: params.quality || 'high',
+        output_format: 'png',
+        response_format: 'b64_json'
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("❌ Image generation error:", error);
+      throw new Error(`Image generation failed: ${error}`);
+    }
+
+    const data = await response.json();
+    console.log("✅ Image generated successfully");
+    
+    return {
+      image_url: `data:image/png;base64,${data.data[0].b64_json}`,
+      prompt: params.prompt,
+      size: params.size || '1024x1024',
+      quality: params.quality || 'high'
+    };
+  },
 };
 
 type ToolName = keyof typeof tools;
@@ -884,6 +924,30 @@ Intent mapping examples (use these to choose analytics metric and args):
             limit: { type: "number" }
           },
           required: ["metric"]
+        }
+      },
+      {
+        name: "generate_image",
+        description: "Generate an image from a text description using AI. Perfect for creating marketing materials, social media content, studio imagery, or any visual content for the yoga business.",
+        input_schema: {
+          type: "object",
+          properties: {
+            prompt: { 
+              type: "string", 
+              description: "Detailed description of the image to generate" 
+            },
+            size: { 
+              type: "string", 
+              description: "Image size (1024x1024, 1536x1024, 1024x1536)", 
+              enum: ["1024x1024", "1536x1024", "1024x1536"] 
+            },
+            quality: { 
+              type: "string", 
+              description: "Image quality level", 
+              enum: ["high", "medium", "low"] 
+            }
+          },
+          required: ["prompt"]
         }
       },
     ];
