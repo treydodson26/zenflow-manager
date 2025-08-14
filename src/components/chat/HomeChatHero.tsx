@@ -160,9 +160,9 @@ const regenerate = () => {
           {messages.length <= 1 && !loading && !isStreaming && (
             <div className="px-4 pb-6 text-center animate-fade-in">
               <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground mb-3">
-                Build something <span className="text-red-400">❤️</span> Talo Yoga
+                Meet Fred, Emily's AI Studio Assistant
               </h1>
-              <p className="text-lg sm:text-xl text-muted-foreground mb-8">Create studio automations by chatting with AI</p>
+              <p className="text-lg sm:text-xl text-muted-foreground mb-8">Manage customers, automate communications, and grow your yoga studio</p>
             </div>
           )}
 
