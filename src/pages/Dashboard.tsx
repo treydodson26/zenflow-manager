@@ -12,6 +12,12 @@ const Dashboard = () => {
     revenue_this_month: number | null;
     revenue_change_pct: number | null; // ratio, e.g., 0.08 => +8%
     retention_rate_pct: number | null;
+    trends?: {
+      customers: { x: number; y: number }[];
+      occupancy: { x: number; y: number }[];
+      revenue: { x: number; y: number }[];
+      retention: { x: number; y: number }[];
+    };
     marketing_summary?: { total: number; email_opt_ins: number; text_opt_ins: number; email_opt_in_rate: number };
     source_breakdown?: { classpass: number; direct: number; avg_lifetime_days_classpass: number | null; avg_lifetime_days_direct: number | null };
     waiver_missing_active_7d?: number;
@@ -75,12 +81,13 @@ const Dashboard = () => {
     return () => { mounted = false; };
   }, []);
 
-  const trends = useMemo(() => ({
-    customers: Array.from({ length: 12 }, (_, i) => ({ x: i, y: 80 + Math.round(Math.random() * 20) })),
-    occupancy: Array.from({ length: 12 }, (_, i) => ({ x: i, y: 60 + Math.round(Math.random() * 30) })),
-    revenue: Array.from({ length: 12 }, (_, i) => ({ x: i, y: 7000 + Math.round(Math.random() * 2000) })),
-    retention: Array.from({ length: 12 }, (_, i) => ({ x: i, y: 75 + Math.round(Math.random() * 15) })),
-  }), []);
+  // Use real trend data from metrics, with fallback to empty arrays
+  const trends = useMemo(() => metrics?.trends || {
+    customers: [],
+    occupancy: [],
+    revenue: [],
+    retention: []
+  }, [metrics]);
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -121,12 +128,27 @@ const Dashboard = () => {
         <StudioCalendar />
       </section>
 
-      <Card className="border-dashed">
-        <CardContent className="py-3 text-sm flex items-center justify-between">
-          <span className="text-muted-foreground">Your occupancy is up 5% from last week! Keep momentum by promoting midday classes.</span>
-          <a href="/marketing" className="story-link text-primary">Open Marketing Hub</a>
-        </CardContent>
-      </Card>
+      {/* Dynamic insights based on real data */}
+      {metrics?.revenue_change_pct && metrics.revenue_change_pct > 0 && (
+        <Card className="border-dashed">
+          <CardContent className="py-3 text-sm flex items-center justify-between">
+            <span className="text-muted-foreground">
+              Revenue is up {Math.round(metrics.revenue_change_pct * 100)}% from last month! Keep momentum going.
+            </span>
+            <a href="/marketing" className="story-link text-primary">Open Marketing Hub</a>
+          </CardContent>
+        </Card>
+      )}
+      {metrics?.executive_kpis?.churn_risk_about_to_churn && metrics.executive_kpis.churn_risk_about_to_churn > 0 && (
+        <Card className="border-dashed border-orange-200">
+          <CardContent className="py-3 text-sm flex items-center justify-between">
+            <span className="text-muted-foreground">
+              {metrics.executive_kpis.churn_risk_about_to_churn} customers haven't been seen in 30+ days. Consider reaching out.
+            </span>
+            <a href="/customers" className="story-link text-primary">View Customers</a>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

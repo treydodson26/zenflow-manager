@@ -151,12 +151,90 @@ serve(async (req) => {
     const new_this_month = rows.filter(r => r.first_seen && r.first_seen >= new Date(now.getTime() - 30*86400000)).length;
     const ltv_cac_ratio = new_this_month > 0 ? (mrr_estimate) / (new_this_month * 50) : null;
 
+    // Calculate real trend data for the last 12 weeks
+    const trends = {
+      customers: [],
+      occupancy: [],
+      revenue: [],
+      retention: []
+    };
+
+    // Get customer signup trends (last 12 weeks)
+    for (let i = 11; i >= 0; i--) {
+      const weekStart = new Date(now.getTime() - (i + 1) * 7 * 86400000);
+      const weekEnd = new Date(now.getTime() - i * 7 * 86400000);
+      
+      const weeklySignups = rows.filter(r => 
+        r.first_seen && r.first_seen >= weekStart && r.first_seen < weekEnd
+      ).length;
+      
+      trends.customers.push({ x: 11 - i, y: weeklySignups });
+    }
+
+    // Get booking occupancy trends (last 12 weeks)
+    const { data: bookingTrends, error: bookingErr } = await supabase
+      .from("bookings")
+      .select("booking_date")
+      .gte("booking_date", new Date(now.getTime() - 12 * 7 * 86400000).toISOString())
+      .order("booking_date");
+
+    if (!bookingErr && bookingTrends) {
+      for (let i = 11; i >= 0; i--) {
+        const weekStart = new Date(now.getTime() - (i + 1) * 7 * 86400000);
+        const weekEnd = new Date(now.getTime() - i * 7 * 86400000);
+        
+        const weeklyBookings = bookingTrends.filter(b => {
+          const bookingDate = new Date(b.booking_date);
+          return bookingDate >= weekStart && bookingDate < weekEnd;
+        }).length;
+        
+        // Estimate occupancy based on average class capacity of 15
+        const estimatedOccupancy = Math.min(100, Math.round((weeklyBookings / (7 * 5 * 15)) * 100)); // 5 classes per day, 15 capacity
+        trends.occupancy.push({ x: 11 - i, y: estimatedOccupancy });
+      }
+    }
+
+    // Calculate revenue trends (estimate based on bookings * average price)
+    if (!bookingErr && bookingTrends) {
+      for (let i = 11; i >= 0; i--) {
+        const weekStart = new Date(now.getTime() - (i + 1) * 7 * 86400000);
+        const weekEnd = new Date(now.getTime() - i * 7 * 86400000);
+        
+        const weeklyBookings = bookingTrends.filter(b => {
+          const bookingDate = new Date(b.booking_date);
+          return bookingDate >= weekStart && bookingDate < weekEnd;
+        }).length;
+        
+        // Estimate revenue: $25 average per class
+        const estimatedRevenue = weeklyBookings * 25;
+        trends.revenue.push({ x: 11 - i, y: estimatedRevenue });
+      }
+    }
+
+    // Calculate retention trends (percentage of customers active each week)
+    for (let i = 11; i >= 0; i--) {
+      const weekStart = new Date(now.getTime() - (i + 1) * 7 * 86400000);
+      const weekEnd = new Date(now.getTime() - i * 7 * 86400000);
+      
+      const activeInWeek = rows.filter(r => 
+        r.last_seen && r.last_seen >= weekStart && r.last_seen < weekEnd
+      ).length;
+      
+      const totalCustomersAtTime = rows.filter(r => 
+        r.first_seen && r.first_seen < weekEnd
+      ).length;
+      
+      const retentionRate = totalCustomersAtTime > 0 ? Math.round((activeInWeek / totalCustomersAtTime) * 100) : 0;
+      trends.retention.push({ x: 11 - i, y: Math.min(100, retentionRate) });
+    }
+
     const body = {
       active_customers: typeof activeCustomers === "number" ? activeCustomers : null,
       class_occupancy_pct: avg_capacity_today, // expected 0-100
       revenue_this_month,
       revenue_change_pct, // ratio, e.g., 0.08 => +8%
       retention_rate_pct,
+      trends, // Add real trend data
       // New insights
       marketing_summary: {
         total: totalClients,
