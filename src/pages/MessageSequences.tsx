@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Save, Plus, Trash2 } from "lucide-react";
+import { Save, Plus, Trash2, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface MessageSequence {
@@ -25,6 +25,7 @@ interface MessageSequence {
 const MessageSequences = () => {
   const [sequences, setSequences] = useState<MessageSequence[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -32,7 +33,9 @@ const MessageSequences = () => {
     fetchSequences();
   }, []);
 
-  const fetchSequences = async () => {
+  const fetchSequences = async (showRefreshing = false) => {
+    if (showRefreshing) setRefreshing(true);
+    
     try {
       const { data, error } = await supabase
         .from('message_sequences')
@@ -40,7 +43,16 @@ const MessageSequences = () => {
         .order('day', { ascending: true });
 
       if (error) throw error;
+      
+      console.log('Fetched sequences from database:', data);
       setSequences(data || []);
+      
+      if (showRefreshing) {
+        toast({
+          title: "Refreshed",
+          description: "Message sequences updated from database",
+        });
+      }
     } catch (error) {
       console.error('Error fetching sequences:', error);
       toast({
@@ -50,6 +62,7 @@ const MessageSequences = () => {
       });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -119,6 +132,15 @@ const MessageSequences = () => {
             Configure your customer nurture sequence timing and message templates
           </p>
         </div>
+        <Button
+          variant="outline"
+          onClick={() => fetchSequences(true)}
+          disabled={refreshing}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       <div className="grid gap-6">
