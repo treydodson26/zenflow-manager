@@ -148,7 +148,7 @@ const tools = {
     const { data, error } = await supabase
       .from("customers")
       .select("status")
-      .limit(1000);
+      .limit(5000);
     if (error) throw error;
     const counts: Record<string, number> = {};
     for (const row of data || []) {
