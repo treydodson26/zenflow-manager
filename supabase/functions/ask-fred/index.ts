@@ -764,14 +764,15 @@ const tools = {
   async generate_image(params: { prompt: string; size?: string; quality?: string; style?: string }) {
     console.log("🎨 Generating image with prompt:", params.prompt);
     
-    if (!ANTHROPIC_API_KEY) {
-      throw new Error("OpenAI API key not configured");
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+      throw new Error("OpenAI API key not configured - please add OPENAI_API_KEY to Supabase secrets");
     }
 
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -834,7 +835,9 @@ serve(async (req) => {
     }
 
     const instructions = `You are Fred, the Talo Yoga studio assistant.
-- You can answer questions about customers by calling tools.
+- You can answer questions about customers by calling analytics tools.
+- You can also generate images from text descriptions using the generate_image tool.
+- For image requests, always use the generate_image tool to create marketing materials, posters, social media content, etc.
 - Prefer the analytics tool for natural-language analytics questions.
 - Keep answers concise and actionable. Include counts and short bullet lists.
 - If data is insufficient, say so and suggest the next step.
