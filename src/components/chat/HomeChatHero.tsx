@@ -153,16 +153,16 @@ const regenerate = () => {
 };
 
   return (
-    <section className="relative flex flex-col h-screen pt-8 sm:pt-12 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500">
+    <section className="relative flex flex-col h-screen pt-8 sm:pt-12 bg-gradient-to-br from-background via-secondary to-primary/20">
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto pb-40">
         <div className="max-w-3xl mx-auto w-full">
           {messages.length <= 1 && !loading && !isStreaming && (
             <div className="px-4 pb-6 text-center animate-fade-in">
-              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-3">
+              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground mb-3">
                 Build something <span className="text-red-400">❤️</span> Talo Yoga
               </h1>
-              <p className="text-lg sm:text-xl text-white/80 mb-8">Create studio automations by chatting with AI</p>
+              <p className="text-lg sm:text-xl text-muted-foreground mb-8">Create studio automations by chatting with AI</p>
             </div>
           )}
 
@@ -214,7 +214,7 @@ const regenerate = () => {
                   <button
                     key={ex}
                     onClick={() => send(ex)}
-                    className="px-3 py-1.5 text-sm rounded-full border bg-white/20 hover:bg-white/30 transition-colors hover-scale shadow-sm text-white border-white/30"
+                    className="px-3 py-1.5 text-sm rounded-full border bg-card/60 hover:bg-card/80 transition-colors hover-scale shadow-sm text-foreground border-border"
                   >
                     {ex}
                   </button>
