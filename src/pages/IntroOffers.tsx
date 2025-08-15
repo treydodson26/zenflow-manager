@@ -31,7 +31,7 @@ interface IntroCustomer {
   tags?: string[];
 }
 
-// Mock data (replace with Supabase queries later)
+// Stage configurations for intro offer journey
 const STAGES: StageConfig[] = [
   {
     day: 0,
@@ -59,7 +59,7 @@ const STAGES: StageConfig[] = [
       channel: "email",
       subject: "A Little About Talo Yoga — and Making the Most of Your Intro",
       preview:
-        "We're so glad you've stepped into the space with us. Here’s a little more about our community and suggested next classes…",
+        "We're so glad you've stepped into the space with us. Here's a little more about our community and suggested next classes…",
     },
   },
   {
