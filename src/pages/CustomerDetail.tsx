@@ -14,6 +14,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight, AlertTriangle, Send, Users, Tag, Edit3 } from "lucide-react";
 import CustomerAIChat from "@/components/chat/CustomerAIChat";
 import { CustomerDetailSkeleton, ErrorState } from "@/components/ui/loading-skeletons";
+import { supabase } from "@/integrations/supabase/client";
+import CustomerNotes from "@/components/customers/CustomerNotes";
+import SendMessageDialog from "@/components/customers/SendMessageDialog";
 
 // Mock data until real data is wired
 const MOCK = {
@@ -75,21 +78,111 @@ const MOCK = {
   },
 };
 
-function useCustomerMock(id?: string) {
-  // In future: fetch with Supabase using id
+function useCustomerData(id?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [customer, setCustomer] = useState<any>(null);
   
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
+    const fetchCustomer = async () => {
+      if (!id) {
+        setError('Customer ID is required');
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const { data, error } = await supabase
+          .from('customers')
+          .select(`
+            *,
+            bookings (
+              id,
+              booking_date,
+              booking_status,
+              classes_schedule (
+                class_name,
+                instructor_name
+              )
+            )
+          `)
+          .eq('id', parseInt(id))
+          .single();
+        
+        if (error) throw error;
+        
+        // Transform the data to match expected format
+        const transformedCustomer = {
+          id: data.id,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email: data.client_email,
+          phone: data.phone_number,
+          avatar_url: undefined,
+          status: data.status === 'intro_trial' ? 'intro' : 
+                  data.status === 'active' ? 'member' :
+                  data.status === 'drop_in' ? 'drop-in' : 'prospect',
+          current_day: data.intro_start_date 
+            ? Math.floor((Date.now() - new Date(data.intro_start_date).getTime()) / (1000 * 60 * 60 * 24))
+            : 0,
+          total_days: 30,
+          engagement: 'medium' as const,
+          total_classes: data.bookings?.filter((b: any) => b.booking_status === 'confirmed')?.length || 0,
+          total_lifetime_value: data.total_lifetime_value || 0,
+          member_since: data.created_at,
+          last_seen: data.last_seen,
+          notes: data.notes || '',
+          first_class_date: data.first_class_date,
+          preferred_instructor: '',
+          source: data.source || 'Unknown',
+          home_studio: 'Talo Yoga',
+          emergency_contact: '',
+          injuries: 'None listed',
+          birthday: data.birthday,
+          journey: {
+            classes_this_month: 0,
+            next_class: null,
+            conversion_score: 75,
+          },
+          communications: [],
+          classes: (data.bookings || []).map((booking: any) => ({
+            id: booking.id,
+            date: booking.booking_date,
+            title: booking.classes_schedule?.class_name || 'Unknown Class',
+            instructor: booking.classes_schedule?.instructor_name || 'Unknown',
+            status: booking.booking_status === 'confirmed' ? 'attended' : 
+                    booking.booking_status === 'cancelled' ? 'cancelled' : 'no‑show'
+          })),
+          membership: {
+            package: data.status === 'intro_trial' ? 'Intro Offer' : 'Member',
+            expires: data.intro_end_date,
+            purchases: [],
+            upgrade_suggestions: ['Monthly Unlimited', '10‑Class Pack'],
+            classes_remaining: { used: 0, total: 5 },
+          },
+          engagement_metrics: {
+            classes_per_week: 1.5,
+            response_rate: 50,
+            referrals: 0,
+            tags: data.tags ? data.tags.split(',').map((t: string) => t.trim()) : [],
+          },
+        };
+        
+        setCustomer(transformedCustomer);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load customer');
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    return () => clearTimeout(timer);
+    fetchCustomer();
   }, [id]);
   
-  return { customer: MOCK, loading, error };
+  return { customer, loading, error };
 }
 
 function formatCurrency(n: number) {
@@ -125,7 +218,8 @@ function EngagementDots({ level }: { level: "high" | "medium" | "low" }) {
 
 export default function CustomerDetail() {
   const { id } = useParams();
-  const { customer, loading, error } = useCustomerMock(id);
+  const { customer, loading, error } = useCustomerData(id);
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
 
   // Show loading state
   if (loading) {
@@ -298,6 +392,12 @@ export default function CustomerDetail() {
               <CustomerAIChat customer={customer} />
             </div>
             <Tabs defaultValue="classes" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="classes">Classes</TabsTrigger>
+                <TabsTrigger value="timeline">Communications</TabsTrigger>
+                <TabsTrigger value="purchases">Purchases</TabsTrigger>
+                <TabsTrigger value="details">Details</TabsTrigger>
+              </TabsList>
 
 
               <TabsContent value="timeline">
@@ -441,11 +541,12 @@ export default function CustomerDetail() {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full" aria-label="Send Day 14 Conversion Offer" onClick={() => toast({ title: "Day 14 conversion offer sent", description: "Offer template queued." })}>
-                  <Send className="mr-2" /> Send Day 14 Conversion Offer
-                </Button>
-                <Button variant="secondary" className="w-full" aria-label="Send Day 14 WhatsApp Check-in" onClick={() => toast({ title: "WhatsApp check-in queued", description: "Day 14 WhatsApp prepared." })}>
-                  <MessageCircle className="mr-2" /> Send Day 14 WhatsApp Check-in
+                <Button 
+                  className="w-full" 
+                  onClick={() => setShowMessageDialog(true)}
+                  aria-label="Send message to customer"
+                >
+                  <Send className="mr-2" /> Send Message
                 </Button>
                 <Button variant="outline" className="w-full" aria-label="Add to Prenatal Community" onClick={() => toast({ title: "Added to Prenatal Community", description: `${fullName} tagged & added.` })}>
                   <Users className="mr-2" /> Add to Prenatal Community
@@ -518,8 +619,20 @@ export default function CustomerDetail() {
               </CardContent>
             </Card>
 
+            <CustomerNotes customerId={customer.id} />
           </aside>
         </div>
+
+        <SendMessageDialog
+          open={showMessageDialog}
+          onOpenChange={setShowMessageDialog}
+          customer={{
+            id: customer.id,
+            name: fullName,
+            email: customer.email,
+            phone: customer.phone
+          }}
+        />
       </div>
     </TooltipProvider>
   );

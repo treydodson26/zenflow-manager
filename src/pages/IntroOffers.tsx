@@ -1,10 +1,13 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Mail, MessageSquare, CalendarDays } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/loading-skeletons";
 
 // Types
 interface StageTemplate {
@@ -80,46 +83,42 @@ const STAGES: StageConfig[] = [
   },
 ];
 
-const MOCK_CUSTOMERS: Record<number, IntroCustomer[]> = {
-  0: [],
-  7: [],
-  10: [],
-  14: [
-    {
-      id: "1",
-      name: "Sarah Johnson",
-      email: "sarah@example.com",
-      startedAt: "2025-07-19",
-      daysLeft: 5,
-      tags: [],
-    },
-    {
-      id: "2",
-      name: "Jodie Ortiz",
-      email: "jodie.ortiz@gmail.com",
-      startedAt: "2025-07-18",
-      daysLeft: 9,
-      tags: ["Classpass"],
-    },
-    {
-      id: "3",
-      name: "Marcus Chen",
-      email: "marcus@example.com",
-      startedAt: "2025-07-19",
-      daysLeft: 10,
-    },
-  ],
-  28: [
-    {
-      id: "4",
-      name: "Trey Dodson",
-      email: "trey@example.com",
-      startedAt: "2025-07-20",
-      daysLeft: 3,
-      tags: ["Class Pass"],
-    },
-  ],
-};
+// Transform intro offer customer data from Supabase
+function transformIntroCustomers(data: any[]): Record<number, IntroCustomer[]> {
+  const customersByStage: Record<number, IntroCustomer[]> = {
+    0: [], 7: [], 10: [], 14: [], 28: []
+  };
+  
+  data.forEach((customer) => {
+    if (!customer.intro_start_date) return;
+    
+    const startDate = new Date(customer.intro_start_date);
+    const currentDay = Math.floor((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    const endDate = customer.intro_end_date ? new Date(customer.intro_end_date) : new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const daysLeft = Math.max(0, Math.floor((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+    
+    // Determine which stage this customer is in
+    let stage = 0;
+    if (currentDay >= 28) stage = 28;
+    else if (currentDay >= 14) stage = 14;
+    else if (currentDay >= 10) stage = 10;
+    else if (currentDay >= 7) stage = 7;
+    else stage = 0;
+    
+    const introCustomer: IntroCustomer = {
+      id: customer.id.toString(),
+      name: customer.client_name || `${customer.first_name} ${customer.last_name}`,
+      email: customer.client_email,
+      startedAt: customer.intro_start_date,
+      daysLeft,
+      tags: customer.tags ? customer.tags.split(",").map((t: string) => t.trim()) : []
+    };
+    
+    customersByStage[stage].push(introCustomer);
+  });
+  
+  return customersByStage;
+}
 
 function ensureMeta(name: string, content: string) {
   let meta = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
@@ -210,6 +209,39 @@ function StageCard({ config, customers }: { config: StageConfig; customers: Intr
 }
 
 export default function IntroOffers({ embedded = false }: { embedded?: boolean }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [customerData, setCustomerData] = useState<Record<number, IntroCustomer[]>>({
+    0: [], 7: [], 10: [], 14: [], 28: []
+  });
+
+  // Fetch intro offer customers from Supabase
+  useEffect(() => {
+    const fetchIntroCustomers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const { data, error } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('status', 'intro_trial')
+          .not('intro_start_date', 'is', null)
+          .order('intro_start_date', { ascending: false });
+        
+        if (error) throw error;
+        
+        setCustomerData(transformIntroCustomers(data || []));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load intro customers');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchIntroCustomers();
+  }, []);
+
   // SEO (skip when embedded in a tab)
   useEffect(() => {
     if (embedded) return;
@@ -225,7 +257,40 @@ export default function IntroOffers({ embedded = false }: { embedded?: boolean }
     link.href = window.location.origin + "/intro-offers";
   }, [embedded]);
 
-  const data = useMemo(() => MOCK_CUSTOMERS, []);
+  if (loading) {
+    return (
+      <main className="container mx-auto max-w-6xl px-4 py-6 space-y-6">
+        <header className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight">Intro Offers – Nurture Sequence</h1>
+          <p className="text-sm text-muted-foreground">Track customers through their 30‑day intro journey across 5 touchpoints.</p>
+        </header>
+        <section className="grid gap-4">
+          {STAGES.map((stage) => (
+            <Card key={stage.day} className="overflow-hidden">
+              <CardHeader className="gap-2">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-48" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="container mx-auto max-w-6xl px-4 py-6">
+        <ErrorState 
+          title="Failed to load intro customers" 
+          message={error}
+        />
+      </main>
+    );
+  }
 
   return (
     <main className="container mx-auto max-w-6xl px-4 py-6 space-y-6">
@@ -236,7 +301,7 @@ export default function IntroOffers({ embedded = false }: { embedded?: boolean }
 
       <section className="grid gap-4">
         {STAGES.map((stage) => (
-          <StageCard key={stage.day} config={stage} customers={data[stage.day] || []} />
+          <StageCard key={stage.day} config={stage} customers={customerData[stage.day] || []} />
         ))}
       </section>
     </main>

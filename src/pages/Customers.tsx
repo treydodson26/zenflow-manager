@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import IntroOffers from "./IntroOffers";
 import ImportArketa from "./ImportArketa";
 import { CustomerGridSkeleton, ErrorState, EmptyState } from "@/components/ui/loading-skeletons";
+import { supabase } from "@/integrations/supabase/client";
 
 function ensureMeta(name: string, content: string) {
   let el = document.querySelector(`meta[name="${name}"]`);
@@ -16,23 +17,77 @@ function ensureMeta(name: string, content: string) {
   el.setAttribute("content", content);
 }
 
-const MOCK: GalleryCustomer[] = [
-  { id: "1", name: "Ava Patel", email: "ava.patel@example.com", status: "intro", statusLabel: "Intro Offer", currentDay: 12, classesThisWeek: 2, daysSinceLastVisit: 1, tags: ["Morning", "Beginner"], photo: undefined },
-  { id: "2", name: "Liam Chen", email: "liam.chen@example.com", status: "member", statusLabel: "Member", currentDay: 0, classesThisWeek: 3, daysSinceLastVisit: 0, tags: ["Evening", "Vinyasa"], photo: undefined },
-  { id: "3", name: "Sofia Rossi", email: "sofia.rossi@example.com", status: "drop-in", statusLabel: "Drop-in", currentDay: 0, classesThisWeek: 1, daysSinceLastVisit: 9, tags: ["Hatha"], photo: undefined },
-  { id: "4", name: "Noah Garcia", email: "noah.garcia@example.com", status: "inactive", statusLabel: "Inactive", currentDay: 0, classesThisWeek: 0, daysSinceLastVisit: 22, tags: ["Restorative"], photo: undefined },
-  { id: "5", name: "Mia Müller", email: "mia.mueller@example.com", status: "intro", statusLabel: "Intro Offer", currentDay: 26, classesThisWeek: 2, daysSinceLastVisit: 3, tags: ["Prenatal", "Morning"], photo: undefined },
-  { id: "6", name: "Jon Park", email: "jon.park@example.com", status: "member", statusLabel: "Member", currentDay: 0, classesThisWeek: 4, daysSinceLastVisit: 2, tags: ["Power", "Evening"], photo: undefined },
-];
+// Transform customer data from Supabase to gallery format
+function transformCustomerData(customers: any[]): GalleryCustomer[] {
+  return customers.map((customer) => {
+    const daysSinceLastSeen = customer.last_seen 
+      ? Math.floor((Date.now() - new Date(customer.last_seen).getTime()) / (1000 * 60 * 60 * 24))
+      : 999;
+    
+    // Calculate current day for intro offers
+    const currentDay = customer.intro_start_date 
+      ? Math.floor((Date.now() - new Date(customer.intro_start_date).getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+    
+    const statusLabels = {
+      intro_trial: "Intro Offer",
+      active: "Member", 
+      inactive: "Inactive",
+      prospect: "Prospect",
+      drop_in: "Drop-in"
+    };
+    
+    return {
+      id: customer.id.toString(),
+      name: customer.client_name || `${customer.first_name} ${customer.last_name}`,
+      email: customer.client_email,
+      status: customer.status === "intro_trial" ? "intro" : 
+              customer.status === "active" ? "member" :
+              customer.status === "drop_in" ? "drop-in" : "inactive",
+      statusLabel: statusLabels[customer.status as keyof typeof statusLabels] || "Unknown",
+      currentDay: customer.status === "intro_trial" ? currentDay : 0,
+      classesThisWeek: 0, // TODO: Calculate from bookings
+      daysSinceLastVisit: daysSinceLastSeen,
+      tags: customer.tags ? customer.tags.split(",").map((t: string) => t.trim()) : [],
+      photo: undefined
+    };
+  });
+}
 
 type Filter = "all" | "intro" | "active" | "attention";
 
 export default function CustomersGallery() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  const [loading, setLoading] = useState(false); // Since we're using mock data, set to false
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [customers, setCustomers] = useState<GalleryCustomer[]>([]);
 
+  // Fetch customers from Supabase
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const { data, error } = await supabase
+          .from('customers')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        setCustomers(transformCustomerData(data || []));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load customers');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCustomers();
+  }, []);
+  
   // SEO
   useEffect(() => {
     document.title = "Customers Gallery | Talo Yoga";
@@ -45,40 +100,40 @@ export default function CustomersGallery() {
 
   // Derived counts and filtering
   const counts = useMemo(() => {
-    const all = MOCK.length;
-    const intro = MOCK.filter((s) => s.status === "intro").length;
-    const active = MOCK.filter((s) => s.status === "member").length;
-    const attention = MOCK.filter((s) => s.daysSinceLastVisit > 14 || (s.status === "intro" && s.currentDay >= 25)).length;
+    const all = customers.length;
+    const intro = customers.filter((s) => s.status === "intro").length;
+    const active = customers.filter((s) => s.status === "member").length;
+    const attention = customers.filter((s) => s.daysSinceLastVisit > 14 || (s.status === "intro" && s.currentDay >= 25)).length;
     return { all, intro, active, attention };
-  }, []);
+  }, [customers]);
 
   const filtered = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    let list = [...MOCK];
+    let list = [...customers];
     if (filter === "intro") list = list.filter((s) => s.status === "intro");
     if (filter === "active") list = list.filter((s) => s.status === "member");
     if (filter === "attention") list = list.filter((s) => s.daysSinceLastVisit > 14 || (s.status === "intro" && s.currentDay >= 25));
     if (!term) return list;
     return list.filter((s) => [s.name, s.email].some((v) => v.toLowerCase().includes(term)));
-  }, [searchTerm, filter]);
+  }, [searchTerm, filter, customers]);
 
   const clearFilters = () => { setSearchTerm(""); setFilter("all"); };
 
-  const totalStudents = MOCK.length;
+  const totalStudents = customers.length;
 
   const prospects = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    const list = MOCK.filter((s) => s.status === "inactive" || (s as any).status === "prospect");
+    const list = customers.filter((s) => s.status === "inactive" || (s as any).status === "prospect");
     if (!term) return list;
     return list.filter((s) => [s.name, s.email].some((v) => v.toLowerCase().includes(term)));
-  }, [searchTerm]);
+  }, [searchTerm, customers]);
 
   const dropins = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    const list = MOCK.filter((s) => s.status === "drop-in");
+    const list = customers.filter((s) => s.status === "drop-in");
     if (!term) return list;
     return list.filter((s) => [s.name, s.email].some((v) => v.toLowerCase().includes(term)));
-  }, [searchTerm]);
+  }, [searchTerm, customers]);
 
   const clearSearch = () => setSearchTerm("");
 
