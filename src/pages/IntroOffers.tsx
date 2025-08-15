@@ -85,17 +85,35 @@ const STAGES: StageConfig[] = [
 
 // Transform intro offer customer data from Supabase
 function transformIntroCustomers(data: any[]): Record<number, IntroCustomer[]> {
+  console.log('transformIntroCustomers called with:', data);
+  
   const customersByStage: Record<number, IntroCustomer[]> = {
     0: [], 7: [], 10: [], 14: [], 28: []
   };
   
   data.forEach((customer) => {
-    if (!customer.intro_start_date) return;
+    console.log('Processing customer:', customer.client_name, 'start_date:', customer.intro_start_date);
+    
+    // If no intro_start_date, assume they're at Day 0
+    if (!customer.intro_start_date) {
+      const introCustomer: IntroCustomer = {
+        id: customer.id.toString(),
+        name: customer.client_name || `${customer.first_name} ${customer.last_name}`,
+        email: customer.client_email,
+        startedAt: new Date().toISOString(), // Use current date if no start date
+        daysLeft: 30,
+        tags: customer.tags ? customer.tags.split(",").map((t: string) => t.trim()) : []
+      };
+      customersByStage[0].push(introCustomer);
+      return;
+    }
     
     const startDate = new Date(customer.intro_start_date);
     const currentDay = Math.floor((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     const endDate = customer.intro_end_date ? new Date(customer.intro_end_date) : new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000);
     const daysLeft = Math.max(0, Math.floor((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+    
+    console.log('Customer', customer.client_name, 'is on day', currentDay, 'with', daysLeft, 'days left');
     
     // Determine which stage this customer is in
     let stage = 0;
@@ -104,6 +122,8 @@ function transformIntroCustomers(data: any[]): Record<number, IntroCustomer[]> {
     else if (currentDay >= 10) stage = 10;
     else if (currentDay >= 7) stage = 7;
     else stage = 0;
+    
+    console.log('Assigning customer', customer.client_name, 'to stage', stage);
     
     const introCustomer: IntroCustomer = {
       id: customer.id.toString(),
@@ -117,6 +137,7 @@ function transformIntroCustomers(data: any[]): Record<number, IntroCustomer[]> {
     customersByStage[stage].push(introCustomer);
   });
   
+  console.log('Final customersByStage:', customersByStage);
   return customersByStage;
 }
 
@@ -222,16 +243,21 @@ export default function IntroOffers({ embedded = false }: { embedded?: boolean }
         setLoading(true);
         setError(null);
         
+        console.log('Fetching intro customers...');
+        
         const { data, error } = await supabase
           .from('customers')
           .select('*')
           .eq('status', 'intro_trial')
-          .not('intro_start_date', 'is', null)
           .order('intro_start_date', { ascending: false });
+        
+        console.log('Raw data from Supabase:', data);
+        console.log('Error from Supabase:', error);
         
         if (error) throw error;
         
         const transformedData = transformIntroCustomers(data || []);
+        console.log('Transformed data:', transformedData);
         setCustomerData(transformedData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load intro customers');
