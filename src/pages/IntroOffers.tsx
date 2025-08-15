@@ -231,7 +231,8 @@ export default function IntroOffers({ embedded = false }: { embedded?: boolean }
         
         if (error) throw error;
         
-        setCustomerData(transformIntroCustomers(data || []));
+        const transformedData = transformIntroCustomers(data || []);
+        setCustomerData(transformedData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load intro customers');
       } finally {

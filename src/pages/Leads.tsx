@@ -8,6 +8,7 @@ import StatCard from "@/components/dashboard/StatCard";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { LeadsDashboardSkeleton, ErrorState, EmptyState } from "@/components/ui/loading-skeletons";
+import { supabase } from "@/integrations/supabase/client";
 
 // SEO helper
 function ensureMeta(name: string, content: string) {
@@ -39,13 +40,148 @@ const CHART_CONFIG = {
   previous: { label: "Previous Week", color: "hsl(var(--muted-foreground))" },
 };
 
+interface LeadData {
+  prospects: number;
+  intro_0_7: number;
+  intro_8_14: number;
+  intro_15_28: number;
+  offer_sent: number;
+  membership_purchased: number;
+  active_member: number;
+}
+
+interface Lead {
+  id: string;
+  name: string;
+  email: string;
+  type: string;
+  introDays: number;
+  lastClass: string | null;
+  status: string;
+  created_at: string;
+}
+
 export default function Leads() {
   const [timeframe, setTimeframe] = useState("all");
   const [program, setProgram] = useState("all");
   const [dayFilter, setDayFilter] = useState<string>("all");
-  const [loading, setLoading] = useState(false); // Set to false since using mock data
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [leadCounts, setLeadCounts] = useState<LeadData>({
+    prospects: 0,
+    intro_0_7: 0,
+    intro_8_14: 0,
+    intro_15_28: 0,
+    offer_sent: 0,
+    membership_purchased: 0,
+    active_member: 0,
+  });
+  const [leads, setLeads] = useState<Lead[]>([]);
   const { toast } = useToast();
+
+  // Fetch lead data from Supabase
+  useEffect(() => {
+    const fetchLeadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Build date filter based on timeframe
+        let dateFilter = null;
+        const now = new Date();
+        if (timeframe === "30d") {
+          dateFilter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        } else if (timeframe === "7d") {
+          dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        } else if (timeframe === "today") {
+          dateFilter = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+        }
+
+        // Fetch customers data
+        let customersQuery = supabase
+          .from('customers')
+          .select('*');
+        
+        if (dateFilter) {
+          customersQuery = customersQuery.gte('created_at', dateFilter);
+        }
+
+        const { data: customers, error: customersError } = await customersQuery;
+        if (customersError) throw customersError;
+
+        // Fetch leads data
+        let leadsQuery = supabase
+          .from('leads')
+          .select('*');
+          
+        if (dateFilter) {
+          leadsQuery = leadsQuery.gte('created_at', dateFilter);
+        }
+
+        const { data: leadsData, error: leadsError } = await leadsQuery;
+        if (leadsError) throw leadsError;
+
+        // Calculate stage counts
+        const counts: LeadData = {
+          prospects: leadsData?.filter(l => l.status === 'new' || l.status === 'contacted').length || 0,
+          intro_0_7: 0,
+          intro_8_14: 0,
+          intro_15_28: 0,
+          offer_sent: 0,
+          membership_purchased: 0,
+          active_member: customers?.filter(c => c.status === 'active').length || 0,
+        };
+
+        // Process intro customers
+        customers?.forEach((customer) => {
+          if (customer.status === 'intro_trial' && customer.intro_start_date) {
+            const startDate = new Date(customer.intro_start_date);
+            const daysSinceStart = Math.floor((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            if (daysSinceStart <= 7) counts.intro_0_7++;
+            else if (daysSinceStart <= 14) counts.intro_8_14++;
+            else if (daysSinceStart <= 28) counts.intro_15_28++;
+          }
+        });
+
+        setLeadCounts(counts);
+
+        // Transform leads for display
+        const transformedLeads: Lead[] = [
+          ...(leadsData?.map(lead => ({
+            id: lead.id,
+            name: `${lead.first_name} ${lead.last_name}`,
+            email: lead.email,
+            type: 'prospect',
+            introDays: 0,
+            lastClass: null,
+            status: lead.status,
+            created_at: lead.created_at
+          })) || []),
+          ...(customers?.filter(c => c.status === 'intro_trial').map(customer => ({
+            id: customer.id.toString(),
+            name: customer.client_name || `${customer.first_name} ${customer.last_name}`,
+            email: customer.client_email,
+            type: 'intro',
+            introDays: customer.intro_start_date 
+              ? Math.floor((Date.now() - new Date(customer.intro_start_date).getTime()) / (1000 * 60 * 60 * 24))
+              : 0,
+            lastClass: customer.last_seen,
+            status: customer.status,
+            created_at: customer.created_at
+          })) || [])
+        ];
+
+        setLeads(transformedLeads);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load lead data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeadData();
+  }, [timeframe, program]);
 
   useEffect(() => {
     document.title = "Pipeline Dashboard | Talo Yoga";
@@ -55,34 +191,90 @@ export default function Leads() {
     link.href = `${window.location.origin}/leads`;
   }, []);
 
-  // Mock counts per stage (would come from Supabase)
-  const counts = useMemo(() => ({
-    prospects: 12,
-    intro_0_7: 8,
-    intro_8_14: 6,
-    intro_15_28: 4,
-    offer_sent: 3,
-    membership_purchased: 2,
-    active_member: 1,
-  }), [timeframe, program, dayFilter]);
+  // Filter leads based on day filter
+  const filteredLeads = useMemo(() => {
+    if (dayFilter === "all") return leads;
+    
+    return leads.filter(lead => {
+      if (lead.type === 'intro') {
+        const dayNum = parseInt(dayFilter);
+        return Math.abs(lead.introDays - dayNum) <= 2; // Show leads within 2 days of target
+      }
+      return dayFilter === "0" && lead.type === 'prospect';
+    });
+  }, [leads, dayFilter]);
 
-  const conversions = [
-    { from: "Prospect", to: "First Class Booked", rate: 0.6 },
-    { from: "First Class", to: "Intro Package Purchase", rate: 0.7 },
-    { from: "Intro Day 7", to: "Still Active", rate: 0.8 },
-    { from: "Intro Day 14", to: "Still Active", rate: 0.75 },
-    { from: "Intro Complete", to: "Membership Offer", rate: 0.5 },
-    { from: "Offer", to: "Membership Purchased", rate: 0.4 },
-  ];
+  // Calculate conversion rates based on real data
+  const conversions = useMemo(() => [
+    { 
+      from: "Prospect", 
+      to: "First Class Booked", 
+      rate: leadCounts.prospects > 0 ? leadCounts.intro_0_7 / leadCounts.prospects : 0 
+    },
+    { 
+      from: "First Class", 
+      to: "Intro Package Purchase", 
+      rate: leadCounts.intro_0_7 > 0 ? leadCounts.intro_8_14 / leadCounts.intro_0_7 : 0 
+    },
+    { 
+      from: "Intro Day 7", 
+      to: "Still Active", 
+      rate: leadCounts.intro_0_7 > 0 ? leadCounts.intro_8_14 / leadCounts.intro_0_7 : 0 
+    },
+    { 
+      from: "Intro Day 14", 
+      to: "Still Active", 
+      rate: leadCounts.intro_8_14 > 0 ? leadCounts.intro_15_28 / leadCounts.intro_8_14 : 0 
+    },
+    { 
+      from: "Intro Complete", 
+      to: "Membership Offer", 
+      rate: leadCounts.intro_15_28 > 0 ? leadCounts.offer_sent / leadCounts.intro_15_28 : 0 
+    },
+    { 
+      from: "Offer", 
+      to: "Membership Purchased", 
+      rate: leadCounts.offer_sent > 0 ? leadCounts.membership_purchased / leadCounts.offer_sent : 0 
+    },
+  ], [leadCounts]);
 
-  const leads = useMemo(() => (
-    [
-      { id: "1", name: "Ava Patel", email: "ava.patel@example.com", type: "prospect", introDays: 0, lastClass: null },
-      { id: "2", name: "Liam Chen", email: "liam.chen@example.com", type: "intro", introDays: 6, lastClass: "2025-08-08" },
-      { id: "3", name: "Sofia Rossi", email: "sofia.rossi@example.com", type: "intro", introDays: 12, lastClass: "2025-08-05" },
-      { id: "4", name: "Noah Garcia", email: "noah.garcia@example.com", type: "intro", introDays: 21, lastClass: "2025-08-01" },
-    ]
-  ), []);
+  // Handle sending messages
+  const handleSendMessage = async (leadId: string, messageType: 'day0' | 'whatsapp') => {
+    try {
+      const lead = leads.find(l => l.id === leadId);
+      if (!lead) return;
+
+      // Log the communication
+      const { error } = await supabase
+        .from('communications_log')
+        .insert({
+          customer_id: parseInt(lead.id),
+          message_sequence_id: 1,
+          message_type: messageType === 'day0' ? 'email' : 'whatsapp',
+          subject: messageType === 'day0' ? 'Welcome to Talo Yoga!' : null,
+          content: messageType === 'day0' 
+            ? 'Welcome to our yoga community! Here are some tips to get started...'
+            : 'Hi! Checking in to see how your yoga journey is going.',
+          recipient_email: messageType === 'day0' ? lead.email : null,
+          recipient_phone: messageType === 'whatsapp' ? null : null, // Would need phone from customer data
+          delivery_status: 'pending'
+        });
+
+      if (error) throw error;
+
+      toast({ 
+        title: messageType === 'day0' ? "Day 0 Email queued" : "WhatsApp sent", 
+        description: `Message prepared for ${lead.name}` 
+      });
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Show loading state
   if (loading) {
@@ -91,7 +283,7 @@ export default function Leads() {
 
   // Show error state
   if (error) {
-    return <ErrorState title="Pipeline Error" message={error} onRetry={() => setError(null)} />;
+    return <ErrorState title="Pipeline Error" message={error} onRetry={() => window.location.reload()} />;
   }
 
   return (
@@ -158,7 +350,7 @@ export default function Leads() {
           {/* KPI Stage Cards */}
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
             {stages.map((s) => (
-              <StatCard key={s.key} title={s.label} value={String((counts as any)[s.key])} subtitle="Leads" />
+              <StatCard key={s.key} title={s.label} value={String(leadCounts[s.key as keyof LeadData])} subtitle="Leads" />
             ))}
           </section>
 
@@ -230,7 +422,7 @@ export default function Leads() {
         </TabsContent>
 
         <TabsContent value="lead-list">
-          {leads.length === 0 ? (
+          {filteredLeads.length === 0 ? (
             <EmptyState
               title="No leads found"
               message="No leads match your current filters."
@@ -243,7 +435,7 @@ export default function Leads() {
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {leads.map((l) => (
+              {filteredLeads.map((l) => (
                 <Card key={l.id} className="animate-fade-in">
                   <CardContent className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
@@ -258,9 +450,9 @@ export default function Leads() {
                     </div>
                     <div className="flex gap-2 pt-2">
                       {l.type === "prospect" && (
-                        <Button size="sm" onClick={() => toast({ title: "Day 0 Email queued", description: `Email prepared for ${l.name}` })}>Send Day 0 Email</Button>
+                        <Button size="sm" onClick={() => handleSendMessage(l.id, 'day0')}>Send Day 0 Email</Button>
                       )}
-                      <Button size="sm" variant="secondary" onClick={() => toast({ title: "WhatsApp sent", description: `Message sent to ${l.name}` })}>Send WhatsApp</Button>
+                      <Button size="sm" variant="secondary" onClick={() => handleSendMessage(l.id, 'whatsapp')}>Send WhatsApp</Button>
                     </div>
                   </CardContent>
                 </Card>
