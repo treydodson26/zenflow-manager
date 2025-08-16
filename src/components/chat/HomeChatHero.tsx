@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Send, Square, RotateCcw, User, Bot, Mic, PanelLeftClose, PanelLeftOpen, Settings, Image, FileText, Calculator, UserCheck, File } from "lucide-react";
+import { Send, Square, RotateCcw, User, Bot, Mic, PanelLeftClose, PanelLeftOpen, Wrench, Image, FileText, Calculator, UserCheck, File } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -212,7 +212,7 @@ const handleToolAction = async (action: string) => {
               <Popover open={toolsOpen} onOpenChange={setToolsOpen}>
                 <PopoverTrigger asChild>
                   <Button type="button" size="icon" variant="ghost" className="rounded-full" title="Tools">
-                    <Settings className="h-5 w-5" />
+                    <Wrench className="h-5 w-5" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-56 p-2" side="top" align="end">
@@ -380,7 +380,7 @@ const handleToolAction = async (action: string) => {
                   <Popover open={toolsOpen} onOpenChange={setToolsOpen}>
                     <PopoverTrigger asChild>
                       <Button type="button" size="icon" variant="ghost" className="rounded-full" title="Tools">
-                        <Settings className="h-5 w-5" />
+                        <Wrench className="h-5 w-5" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-56 p-2" side="top" align="end">
