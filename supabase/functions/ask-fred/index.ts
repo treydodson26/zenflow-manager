@@ -144,44 +144,29 @@ const tools = {
     return data;
   },
   async stats_overview() {
-    console.log("🔍 Fetching customer status overview...");
-    
-    // Get total count first
-    const { count: totalCount, error: countError } = await supabase
-      .from("customers")
-      .select("*", { count: 'exact', head: true });
-    
-    if (countError) {
-      console.error("❌ Error getting total count:", countError);
-      throw countError;
-    }
-    
-    console.log(`📊 Total customers in database: ${totalCount}`);
-    
-    // Fetch all customer statuses (not limited to 5000)
-    const { data, error } = await supabase
-      .from("customers")
-      .select("status");
-      
+    console.log("🔍 Fetching customer status overview via RPC...");
+
+    // Call the new RPC function to get aggregated stats directly from the database
+    const { data, error } = await supabase.rpc('get_customer_stats_overview');
+
     if (error) {
-      console.error("❌ Error fetching customer statuses:", error);
+      console.error("❌ Error calling get_customer_stats_overview RPC:", error);
       throw error;
     }
-    
-    console.log(`📥 Fetched ${data?.length || 0} customer records`);
-    
-    const counts: Record<string, number> = {};
-    for (const row of data || []) {
-      const s = (row.status || "unknown").toString();
-      counts[s] = (counts[s] || 0) + 1;
-    }
-    
-    console.log("📈 Status counts:", counts);
-    
-    return { 
-      total_customers: totalCount,
-      status_breakdown: counts,
-      fetched_records: data?.length || 0 
+
+    console.log("📈 Received stats from RPC:", data);
+
+    // The RPC returns the data in the exact format we need.
+    // Example `data` object:
+    // {
+    //   "total_customers": 1234,
+    //   "status_breakdown": { "active": 500, "prospect": 200, "unknown": 34 }
+    // }
+
+    return {
+      total_customers: data.total_customers,
+      status_breakdown: data.status_breakdown,
+      fetched_records: data.total_customers // The total count is now directly available
     };
   },
   async analytics(params: { metric: string; periodDays?: number; bucket?: string; limit?: number }) {

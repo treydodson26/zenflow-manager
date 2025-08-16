@@ -1416,6 +1416,10 @@ export type Database = {
         Args: { customer_id_param: number }
         Returns: string
       }
+      get_customer_stats_overview: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
