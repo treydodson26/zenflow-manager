@@ -2,7 +2,8 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Send, Square, RotateCcw, User, Bot, Mic, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Send, Square, RotateCcw, User, Bot, Mic, PanelLeftClose, PanelLeftOpen, Settings, Image, FileText, Calculator, UserCheck, File } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -30,6 +31,7 @@ export default function HomeChatHero({ defaultFocus = false }: { defaultFocus?: 
   const [isStreaming, setIsStreaming] = useState(false);
   const streamingStopRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   const { open, toggleSidebar } = useSidebar();
 
@@ -145,6 +147,30 @@ const regenerate = () => {
   send(prompt, { replay: true });
 };
 
+const handleToolAction = async (action: string) => {
+  setToolsOpen(false);
+  
+  switch (action) {
+    case 'generate-image':
+      send("Generate a marketing image for the yoga studio");
+      break;
+    case 'create-newsletter':
+      send("Create a newsletter for this month highlighting upcoming classes and events");
+      break;
+    case 'generate-payroll':
+      send("Calculate teacher payroll for this month");
+      break;
+    case 'find-sub':
+      send("Help me find substitute teachers for upcoming classes");
+      break;
+    case 'create-document':
+      send("Help me create a document for the studio");
+      break;
+    default:
+      break;
+  }
+};
+
   return (
     <section className="relative flex flex-col h-screen bg-gradient-to-br from-background via-secondary to-primary/20">
       {/* When no messages, center everything */}
@@ -152,7 +178,7 @@ const regenerate = () => {
         <div className="flex-1 flex flex-col justify-center items-center px-4">
           <div className="text-center animate-fade-in mb-8">
             <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground mb-3">
-              Meet Fred, Emily's AI Studio Assistant
+              Hello Emily 👋
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground mb-8">Manage customers, automate communications, and grow your yoga studio</p>
           </div>
@@ -174,7 +200,7 @@ const regenerate = () => {
                 }
               }}
               placeholder={placeholder}
-              className="w-full pr-28 resize-none rounded-2xl shadow bg-white/95 backdrop-blur border border-white/20 min-h-[80px] py-4 text-base placeholder:text-base"
+              className="w-full pr-32 resize-none rounded-2xl shadow bg-white/95 backdrop-blur border border-white/20 min-h-[80px] py-4 text-base placeholder:text-base"
               rows={3}
             />
 
@@ -183,6 +209,62 @@ const regenerate = () => {
               <Button type="button" size="icon" variant="ghost" className="rounded-full" title={open ? "Exit focus mode" : "Focus mode"} onClick={toggleSidebar}>
                 {open ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
               </Button>
+              <Popover open={toolsOpen} onOpenChange={setToolsOpen}>
+                <PopoverTrigger asChild>
+                  <Button type="button" size="icon" variant="ghost" className="rounded-full" title="Tools">
+                    <Settings className="h-5 w-5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" side="top" align="end">
+                  <div className="flex flex-col gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start gap-2 h-8"
+                      onClick={() => handleToolAction('generate-image')}
+                    >
+                      <Image className="h-4 w-4" />
+                      Generate Image
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start gap-2 h-8"
+                      onClick={() => handleToolAction('create-newsletter')}
+                    >
+                      <FileText className="h-4 w-4" />
+                      Create a Newsletter
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start gap-2 h-8"
+                      onClick={() => handleToolAction('generate-payroll')}
+                    >
+                      <Calculator className="h-4 w-4" />
+                      Generate Payroll
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start gap-2 h-8"
+                      onClick={() => handleToolAction('find-sub')}
+                    >
+                      <UserCheck className="h-4 w-4" />
+                      Find a Sub
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start gap-2 h-8"
+                      onClick={() => handleToolAction('create-document')}
+                    >
+                      <File className="h-4 w-4" />
+                      Create a Document
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Button type="button" size="icon" variant="ghost" className="rounded-full" title="Voice">
                 <Mic className="h-5 w-5" />
               </Button>
@@ -286,7 +368,7 @@ const regenerate = () => {
                     }
                   }}
                   placeholder={placeholder}
-                  className="w-full pr-28 resize-none rounded-2xl shadow bg-white/95 backdrop-blur border border-white/20 min-h-[80px] py-4 text-base placeholder:text-base"
+                  className="w-full pr-32 resize-none rounded-2xl shadow bg-white/95 backdrop-blur border border-white/20 min-h-[80px] py-4 text-base placeholder:text-base"
                   rows={3}
                 />
 
@@ -295,6 +377,62 @@ const regenerate = () => {
                   <Button type="button" size="icon" variant="ghost" className="rounded-full" title={open ? "Exit focus mode" : "Focus mode"} onClick={toggleSidebar}>
                     {open ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
                   </Button>
+                  <Popover open={toolsOpen} onOpenChange={setToolsOpen}>
+                    <PopoverTrigger asChild>
+                      <Button type="button" size="icon" variant="ghost" className="rounded-full" title="Tools">
+                        <Settings className="h-5 w-5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-2" side="top" align="end">
+                      <div className="flex flex-col gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="justify-start gap-2 h-8"
+                          onClick={() => handleToolAction('generate-image')}
+                        >
+                          <Image className="h-4 w-4" />
+                          Generate Image
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="justify-start gap-2 h-8"
+                          onClick={() => handleToolAction('create-newsletter')}
+                        >
+                          <FileText className="h-4 w-4" />
+                          Create a Newsletter
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="justify-start gap-2 h-8"
+                          onClick={() => handleToolAction('generate-payroll')}
+                        >
+                          <Calculator className="h-4 w-4" />
+                          Generate Payroll
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="justify-start gap-2 h-8"
+                          onClick={() => handleToolAction('find-sub')}
+                        >
+                          <UserCheck className="h-4 w-4" />
+                          Find a Sub
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="justify-start gap-2 h-8"
+                          onClick={() => handleToolAction('create-document')}
+                        >
+                          <File className="h-4 w-4" />
+                          Create a Document
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <Button type="button" size="icon" variant="ghost" className="rounded-full" title="Voice">
                     <Mic className="h-5 w-5" />
                   </Button>
