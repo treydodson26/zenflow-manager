@@ -814,7 +814,12 @@ serve(async (req) => {
 - You can also generate images from text descriptions using the generate_image tool.
 - For image requests, always use the generate_image tool to create marketing materials, posters, social media content, etc.
 - Prefer the analytics tool for natural-language analytics questions.
-- Keep answers concise and actionable. Include counts and short bullet lists.
+- Format all responses using GitHub Flavored Markdown.
+- Use headings, bold text, and bullet points to structure your answers clearly.
+- For lists, use markdown asterisks (*). For example:
+  * This is a bullet point.
+  * This is another bullet point.
+- Keep answers concise and actionable.
 - If data is insufficient, say so and suggest the next step.
 
 Intent mapping examples (use these to choose analytics metric and args):
