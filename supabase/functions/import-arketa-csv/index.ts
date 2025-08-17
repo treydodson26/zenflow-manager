@@ -6,6 +6,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+function safeDateParse(dateString: string): Date | null {
+  if (!dateString || typeof dateString !== 'string') return null;
+  const date = new Date(dateString.trim());
+  return isNaN(date.getTime()) ? null : date;
+}
+
 interface ImportResult {
   success: boolean;
   total_customers: number;
@@ -61,6 +67,22 @@ serve(async (req) => {
       );
     }
 
+    // Validate file sizes (max 10MB each)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (clientListFile.size > MAX_FILE_SIZE) {
+      result.errors.push(`Client list file too large: ${Math.round(clientListFile.size / 1024 / 1024)}MB (max 10MB)`);
+    }
+    if (clientAttendanceFile.size > MAX_FILE_SIZE) {
+      result.errors.push(`Client attendance file too large: ${Math.round(clientAttendanceFile.size / 1024 / 1024)}MB (max 10MB)`);
+    }
+
+    if (result.errors.length > 0) {
+      return new Response(JSON.stringify(result), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     console.log(`🚀 Starting CSV import pipeline: ${clientListFile.name}, ${clientAttendanceFile.name}`);
 
     // Step 1: Validate CSV format
@@ -100,6 +122,23 @@ serve(async (req) => {
     const { client_list_data, client_attendance_data } = validationResponse.data;
     console.log(`✅ Validation passed: ${client_list_data.length} customers, ${client_attendance_data.length} attendance records`);
 
+    // Validate required fields
+    if (!client_list_data || client_list_data.length === 0) {
+      result.errors.push('Client list data is empty');
+      return new Response(JSON.stringify(result), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!client_attendance_data || client_attendance_data.length === 0) {
+      result.errors.push('Client attendance data is empty');
+      return new Response(JSON.stringify(result), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // Step 2: Create daily snapshot
     console.log('📸 Step 2: Creating daily snapshot...');
     const snapshotResponse = await supabase.functions.invoke('create-daily-snapshot', {
@@ -120,87 +159,132 @@ serve(async (req) => {
     result.snapshot_id = snapshotResponse.data.snapshot_id;
     console.log(`✅ Snapshot created: ${result.snapshot_id}`);
 
-    // Step 3: Process customer list and update/insert customers
-    console.log('👥 Step 3: Processing customer data...');
-    
-    for (const customerData of client_list_data) {
-      try {
-        // Find matching attendance data for this customer
-        const attendanceRecord = client_attendance_data.find(
-          (attendance: any) => attendance.client_email === customerData.client_email
-        );
+    // Step 3: Process customer data in batches
+    console.log('👥 Step 3: Processing customer data in batches...');
+    const BATCH_SIZE = 100;
+    const totalBatches = Math.ceil(client_list_data.length / BATCH_SIZE);
 
-        // Upsert customer record
-        const { data: existingCustomer } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('client_email', customerData.client_email)
-          .single();
-
-        const customerPayload = {
-          client_name: customerData.client_name || `${customerData.first_name} ${customerData.last_name}`,
-          first_name: customerData.first_name,
-          last_name: customerData.last_name,
-          client_email: customerData.client_email,
-          phone_number: customerData.phone_number,
-          status: customerData.status || 'prospect',
-          source: customerData.source || 'arketa_import',
-          first_seen: customerData.first_seen ? new Date(customerData.first_seen).toISOString() : null,
-          last_seen: customerData.last_seen ? new Date(customerData.last_seen).toISOString() : null,
-          first_class_date: attendanceRecord?.first_class_date ? new Date(attendanceRecord.first_class_date).toISOString().split('T')[0] : null,
-          last_class_date: attendanceRecord?.last_class_date ? new Date(attendanceRecord.last_class_date).toISOString().split('T')[0] : null,
-          total_lifetime_value: parseFloat(customerData.total_lifetime_value || '0'),
-          intro_start_date: customerData.intro_start_date ? new Date(customerData.intro_start_date).toISOString().split('T')[0] : null,
-          intro_end_date: customerData.intro_end_date ? new Date(customerData.intro_end_date).toISOString().split('T')[0] : null,
-          conversion_date: customerData.conversion_date ? new Date(customerData.conversion_date).toISOString().split('T')[0] : null,
-          marketing_email_opt_in: customerData.marketing_email_opt_in === 'true' || customerData.marketing_email_opt_in === true,
-          marketing_text_opt_in: customerData.marketing_text_opt_in === 'true' || customerData.marketing_text_opt_in === true,
-          agree_to_liability_waiver: customerData.agree_to_liability_waiver === 'true' || customerData.agree_to_liability_waiver === true,
-          updated_at: new Date().toISOString()
-        };
-
-        if (existingCustomer) {
-          await supabase
+    for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+      const startIndex = batchIndex * BATCH_SIZE;
+      const endIndex = Math.min(startIndex + BATCH_SIZE, client_list_data.length);
+      const batch = client_list_data.slice(startIndex, endIndex);
+      
+      console.log(`Processing batch ${batchIndex + 1}/${totalBatches} (${batch.length} customers)`);
+      
+      const customerPayloads = [];
+      const updatePayloads = [];
+      
+      for (const customerData of batch) {
+        try {
+          // Find matching attendance data
+          const attendanceRecord = client_attendance_data.find(
+            attendance => attendance.client_email === customerData.client_email
+          );
+          
+          // Check if customer exists
+          const { data: existingCustomer } = await supabase
             .from('customers')
-            .update(customerPayload)
-            .eq('id', existingCustomer.id);
-          result.updated_customers++;
-        } else {
-          await supabase
-            .from('customers')
-            .insert({
+            .select('id')
+            .eq('client_email', customerData.client_email)
+            .single();
+          
+          const customerPayload = {
+            client_name: customerData.client_name || `${customerData.first_name} ${customerData.last_name}`,
+            first_name: customerData.first_name,
+            last_name: customerData.last_name,
+            client_email: customerData.client_email,
+            phone_number: customerData.phone_number || null,
+            status: customerData.status || 'prospect',
+            source: customerData.source || 'arketa_import',
+            first_seen: customerData.first_seen ? safeDateParse(customerData.first_seen)?.toISOString() : null,
+            last_seen: customerData.last_seen ? safeDateParse(customerData.last_seen)?.toISOString() : null,
+            first_class_date: attendanceRecord?.first_class_date ? safeDateParse(attendanceRecord.first_class_date)?.toISOString().split('T')[0] : null,
+            last_class_date: attendanceRecord?.last_class_date ? safeDateParse(attendanceRecord.last_class_date)?.toISOString().split('T')[0] : null,
+            total_lifetime_value: parseFloat(customerData.total_lifetime_value || '0') || 0,
+            intro_start_date: customerData.intro_start_date ? safeDateParse(customerData.intro_start_date)?.toISOString().split('T')[0] : null,
+            intro_end_date: customerData.intro_end_date ? safeDateParse(customerData.intro_end_date)?.toISOString().split('T')[0] : null,
+            conversion_date: customerData.conversion_date ? safeDateParse(customerData.conversion_date)?.toISOString().split('T')[0] : null,
+            marketing_email_opt_in: customerData.marketing_email_opt_in === 'true' || customerData.marketing_email_opt_in === true,
+            marketing_text_opt_in: customerData.marketing_text_opt_in === 'true' || customerData.marketing_text_opt_in === true,
+            agree_to_liability_waiver: customerData.agree_to_liability_waiver === 'true' || customerData.agree_to_liability_waiver === true,
+            updated_at: new Date().toISOString()
+          };
+          
+          if (existingCustomer) {
+            updatePayloads.push({ id: existingCustomer.id, ...customerPayload });
+            result.updated_customers++;
+          } else {
+            customerPayloads.push({
               ...customerPayload,
               created_at: new Date().toISOString()
             });
-          result.new_customers++;
+            result.new_customers++;
+          }
+          
+          result.total_customers++;
+          
+        } catch (error) {
+          console.error(`Error processing customer ${customerData.client_email}:`, error);
+          result.errors.push(`Failed to process customer ${customerData.client_email}: ${error.message}`);
         }
-
-        result.total_customers++;
-
-        // Step 4: Calculate customer segment for each customer
-        const pricingPlan = attendanceRecord?.last_pricing_option_used || null;
-        const customerId = existingCustomer?.id || (await supabase
+      }
+      
+      // Batch insert new customers
+      if (customerPayloads.length > 0) {
+        const { error: insertError } = await supabase
           .from('customers')
-          .select('id')
-          .eq('client_email', customerData.client_email)
-          .single()).data?.id;
-
-        if (customerId) {
-          await supabase.functions.invoke('calculate-customer-segment', {
-            body: {
-              customer_id: customerId,
-              pricing_plan_name: pricingPlan
-            }
-          });
+          .insert(customerPayloads);
+        
+        if (insertError) {
+          console.error('Batch insert error:', insertError);
+          result.errors.push(`Batch insert failed: ${insertError.message}`);
         }
-
-      } catch (error) {
-        console.error(`Error processing customer ${customerData.client_email}:`, error);
-        result.errors.push(`Failed to process customer ${customerData.client_email}: ${error.message}`);
+      }
+      
+      // Batch update existing customers
+      for (const updatePayload of updatePayloads) {
+        const { id, ...payload } = updatePayload;
+        const { error: updateError } = await supabase
+          .from('customers')
+          .update(payload)
+          .eq('id', id);
+        
+        if (updateError) {
+          console.error('Update error:', updateError);
+          result.errors.push(`Update failed for customer ID ${id}: ${updateError.message}`);
+        }
       }
     }
 
     console.log(`✅ Processed ${result.total_customers} customers (${result.new_customers} new, ${result.updated_customers} updated)`);
+
+    // Step 4: Calculate customer segments in batches
+    console.log('🧮 Step 4: Calculating customer segments...');
+    const { data: processedCustomers } = await supabase
+      .from('customers')
+      .select('id, client_email')
+      .in('client_email', client_list_data.map(c => c.client_email));
+
+    if (processedCustomers) {
+      for (const customer of processedCustomers) {
+        try {
+          const attendanceRecord = client_attendance_data.find(
+            attendance => attendance.client_email === customer.client_email
+          );
+          const pricingPlan = attendanceRecord?.last_pricing_option_used || null;
+          
+          await supabase.functions.invoke('calculate-customer-segment', {
+            body: {
+              customer_id: customer.id,
+              pricing_plan_name: pricingPlan
+            }
+          });
+        } catch (error) {
+          console.error(`Segment calculation failed for ${customer.client_email}:`, error);
+          result.errors.push(`Segment calculation failed for ${customer.client_email}: ${error.message}`);
+        }
+      }
+    }
 
     // Step 5: Detect segment changes
     console.log('🔍 Step 5: Detecting segment changes...');
@@ -216,17 +300,25 @@ serve(async (req) => {
     }
 
     // Log the import to csv_imports table
-    await supabase.from('csv_imports').insert({
+    const { error: logError } = await supabase.from('csv_imports').insert({
       filename: `${clientListFile.name}, ${clientAttendanceFile.name}`,
-      status: 'completed',
+      status: result.errors.length > 0 ? 'completed_with_errors' : 'completed',
       total_records: result.total_customers,
       new_records: result.new_customers,
       updated_records: result.updated_customers,
       failed_records: result.errors.length,
       processing_time_ms: Date.now() - startTime,
       completed_at: new Date().toISOString(),
-      error_details: result.errors.length > 0 ? { errors: result.errors } : null
+      snapshot_id: result.snapshot_id,
+      error_details: result.errors.length > 0 ? { 
+        errors: result.errors.slice(0, 100), // Limit to first 100 errors
+        total_errors: result.errors.length 
+      } : null
     });
+
+    if (logError) {
+      console.error('Failed to log import:', logError);
+    }
 
     result.processing_time_ms = Date.now() - startTime;
     result.success = true;
