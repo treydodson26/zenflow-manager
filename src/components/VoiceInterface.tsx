@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { RealtimeChat } from "@/utils/RealtimeAudio";
 import { Mic, MicOff, Send, Loader2 } from "lucide-react";
 

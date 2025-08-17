@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { Mic, MicOff, Settings, Loader2 } from "lucide-react";
 import { useConversation } from "@11labs/react";
 
@@ -56,10 +56,10 @@ export const AgentFred = ({ className }: AgentFredProps) => {
         return;
       }
       if (signedUrl) {
-        await (conversation as any).startSession({ url: signedUrl });
+        await conversation.startSession({ signedUrl });
         localStorage.setItem("fred_signed_url", signedUrl);
       } else {
-        await (conversation as any).startSession({ agentId });
+        await conversation.startSession({ agentId });
         localStorage.setItem("fred_agent_id", agentId);
       }
     } catch (e: any) {
