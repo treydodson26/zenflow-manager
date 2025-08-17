@@ -15,15 +15,19 @@ function ensureMeta(name: string, content: string) {
 
 type ImportResult = {
   success: boolean;
-  customers_processed: number;
+  total_customers: number;
+  new_customers: number;
+  updated_customers: number;
   segment_changes: Array<{
+    customer_id: number;
     customer_name: string;
-    change_type: string;
     old_segment: string;
     new_segment: string;
+    change_type: string;
   }>;
   processing_time_ms: number;
-  errors?: string[];
+  snapshot_id: string;
+  errors: string[];
 };
 
 function formatBytes(bytes: number) {
@@ -109,17 +113,13 @@ export default function ImportArketa({ embedded = false }: { embedded?: boolean 
     setLoading(true);
     
     try {
-      // Convert files to base64 for transmission
-      const clientListContent = await fileToBase64(clientListFile);
-      const attendanceContent = await fileToBase64(attendanceFile);
+      // Create form data for the edge function
+      const formData = new FormData();
+      formData.append('client_list', clientListFile);
+      formData.append('client_attendance', attendanceFile);
       
       const { data, error } = await supabase.functions.invoke("import-arketa-csv", {
-        body: {
-          client_list: clientListContent,
-          client_attendance: attendanceContent,
-          client_list_filename: clientListFile.name,
-          client_attendance_filename: attendanceFile.name,
-        },
+        body: formData,
       });
 
       if (error) throw error;
@@ -128,7 +128,7 @@ export default function ImportArketa({ embedded = false }: { embedded?: boolean 
       setShowResults(true);
       toast({ 
         title: "Import completed", 
-        description: `Processed ${data.customers_processed} customers with ${data.segment_changes.length} segment changes` 
+        description: `Processed ${data.total_customers} customers with ${data.segment_changes.length} segment changes` 
       });
     } catch (e: any) {
       toast({ 
@@ -140,19 +140,6 @@ export default function ImportArketa({ embedded = false }: { embedded?: boolean 
     }
   };
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const result = reader.result as string;
-        // Remove the data:text/csv;base64, prefix
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = error => reject(error);
-    });
-  };
 
   if (loading) {
     return <PageLoader />;
@@ -288,7 +275,7 @@ export default function ImportArketa({ embedded = false }: { embedded?: boolean 
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 border rounded-lg bg-background">
                   <div className="text-sm text-muted-foreground">Total Records Processed</div>
-                  <div className="text-2xl font-semibold">{result.customers_processed}</div>
+                  <div className="text-2xl font-semibold">{result.total_customers}</div>
                 </div>
                 <div className="p-4 border rounded-lg bg-background">
                   <div className="text-sm text-muted-foreground">Segment Changes Detected</div>
