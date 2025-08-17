@@ -38,3 +38,21 @@ verify_jwt = false
 
 [functions.get-dashboard-metrics]
 verify_jwt = false
+
+[functions.validate-csv-format]
+verify_jwt = false
+
+[functions.import-arketa-csv]
+verify_jwt = false
+
+[functions.create-daily-snapshot]
+verify_jwt = false
+
+[functions.calculate-customer-segment]
+verify_jwt = false
+
+[functions.detect-segment-changes]
+verify_jwt = false
+
+[functions.get-intro-duration]
+verify_jwt = false
