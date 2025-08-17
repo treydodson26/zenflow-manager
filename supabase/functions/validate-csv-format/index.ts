@@ -90,6 +90,10 @@ serve(async (req) => {
   try {
     const { client_list_content, client_attendance_content } = await req.json();
     
+    console.log('📥 Received validation request');
+    console.log('Client list content length:', client_list_content?.length || 0);
+    console.log('Client attendance content length:', client_attendance_content?.length || 0);
+    
     const result: ValidationResult = {
       valid: true,
       errors: []
@@ -98,6 +102,7 @@ serve(async (req) => {
     if (!client_list_content || !client_attendance_content) {
       result.valid = false;
       result.errors.push('Both client_list_content and client_attendance_content are required');
+      console.log('❌ Missing CSV content - client_list:', !!client_list_content, 'client_attendance:', !!client_attendance_content);
       
       return new Response(
         JSON.stringify(result),
