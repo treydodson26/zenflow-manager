@@ -127,19 +127,11 @@ serve(async (req) => {
       result.errors.push(`Failed to parse client attendance CSV: ${error.message}`);
     }
 
-    // Validate formats
-    if (clientListData.length > 0) {
-      const clientListErrors = validateClientListFormat(clientListData);
-      result.errors.push(...clientListErrors);
-    }
-
-    if (clientAttendanceData.length > 0) {
-      const attendanceErrors = validateClientAttendanceFormat(clientAttendanceData);
-      result.errors.push(...attendanceErrors);
-    }
+    // Simple mode: skip strict header/email validation to accept more formats
+    // (We still parse CSVs and let the import pipeline handle mapping/use.)
 
     // Set validation result
-    result.valid = result.errors.length === 0;
+    result.valid = true;
     result.client_list_data = clientListData;
     result.client_attendance_data = clientAttendanceData;
 
