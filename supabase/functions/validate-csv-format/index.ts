@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { parse } from "https://deno.land/std@0.168.0/encoding/csv.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,24 +52,44 @@ const OPTIONAL_CLIENT_ATTENDANCE_COLUMNS = [
 ];
 
 function parseCSV(csvContent: string): any[] {
-  const lines = csvContent.trim().split('\n');
-  if (lines.length < 2) return []; // Need at least header + 1 data row
-  
-  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-  const data = [];
-  
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-    const row: any = {};
+  try {
+    console.log('🔍 Parsing CSV content...');
+    console.log('CSV content preview:', csvContent.substring(0, 200));
     
-    headers.forEach((header, index) => {
-      row[header] = values[index] || '';
+    // Use Deno's built-in CSV parser which handles quotes, commas, and multi-line fields properly
+    const parsed = parse(csvContent, {
+      skipFirstRow: false, // We'll handle the header manually
+      strip: true // Remove surrounding whitespace
     });
     
-    data.push(row);
+    if (parsed.length < 2) {
+      console.log('❌ CSV has insufficient rows:', parsed.length);
+      return []; // Need at least header + 1 data row
+    }
+    
+    // First row is headers
+    const headers = parsed[0] as string[];
+    console.log('📋 CSV headers:', headers);
+    
+    // Convert remaining rows to objects
+    const data = [];
+    for (let i = 1; i < parsed.length; i++) {
+      const values = parsed[i] as string[];
+      const row: any = {};
+      
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
+      });
+      
+      data.push(row);
+    }
+    
+    console.log(`✅ Successfully parsed ${data.length} data rows`);
+    return data;
+  } catch (error) {
+    console.error('❌ Error parsing CSV:', error);
+    throw new Error(`CSV parsing failed: ${error.message}`);
   }
-  
-  return data;
 }
 
 function validateEmail(email: string): boolean {
