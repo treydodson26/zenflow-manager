@@ -6,12 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import PageLoader from "@/components/layout/PageLoader";
+import Dashboard from "./pages/Dashboard";
+import Customers from "./pages/Customers";
 
 // Lazy load all page components for code splitting and improved initial bundle size
 // Each page will be loaded on-demand when the route is accessed
 const Index = lazy(() => import("./pages/Index"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Customers = lazy(() => import("./pages/Customers"));
 const CustomerDetail = lazy(() => import("./pages/CustomerDetail"));
 const Leads = lazy(() => import("./pages/Leads"));
 const ImportArketa = lazy(() => import("./pages/ImportArketa"));
@@ -27,8 +27,8 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 if (typeof window !== "undefined") {
   // Preload the most commonly accessed pages
   setTimeout(() => {
-    import("./pages/Dashboard");
-    import("./pages/Customers");
+    import("./pages/CustomerDetail");
+    import("./pages/Leads");
   }, 1000);
 }
 
