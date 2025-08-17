@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Save, Settings2 } from "lucide-react";
+import { Save, Settings2, Plus, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface BusinessSetting {
   id: string;
@@ -15,15 +17,28 @@ interface BusinessSetting {
   updated_at: string;
 }
 
+interface PricingPlan {
+  plan_name: string;
+  plan_category: 'Intro' | 'Membership' | 'Drop-In';
+  plan_duration_days: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
 const Settings = () => {
   const [settings, setSettings] = useState<BusinessSetting[]>([]);
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [introDuration, setIntroDuration] = useState(14);
+  const [newPlanName, setNewPlanName] = useState('');
+  const [newPlanCategory, setNewPlanCategory] = useState<'Intro' | 'Membership' | 'Drop-In'>('Intro');
+  const [newPlanDuration, setNewPlanDuration] = useState<number | ''>('');
 
   useEffect(() => {
     document.title = "Business Settings | Talo Yoga";
     fetchSettings();
+    fetchPricingPlans();
   }, []);
 
   const fetchSettings = async () => {
@@ -95,6 +110,124 @@ const Settings = () => {
 
   const handleIntroDurationSave = () => {
     updateSetting('intro_offer_duration', { days: introDuration });
+  };
+
+  const fetchPricingPlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pricing_plans')
+        .select('*')
+        .order('plan_name');
+
+      if (error) throw error;
+      setPricingPlans((data || []) as PricingPlan[]);
+    } catch (error) {
+      console.error('Error fetching pricing plans:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load pricing plans",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const addPricingPlan = async () => {
+    if (!newPlanName.trim()) {
+      toast({
+        title: "Error",
+        description: "Plan name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('pricing_plans')
+        .insert({
+          plan_name: newPlanName.trim(),
+          plan_category: newPlanCategory,
+          plan_duration_days: newPlanDuration === '' ? null : Number(newPlanDuration)
+        });
+
+      if (error) throw error;
+
+      setNewPlanName('');
+      setNewPlanCategory('Intro');
+      setNewPlanDuration('');
+      await fetchPricingPlans();
+
+      toast({
+        title: "Success",
+        description: "Pricing plan added successfully",
+      });
+    } catch (error) {
+      console.error('Error adding pricing plan:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add pricing plan",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deletePricingPlan = async (planName: string) => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('pricing_plans')
+        .delete()
+        .eq('plan_name', planName);
+
+      if (error) throw error;
+
+      await fetchPricingPlans();
+
+      toast({
+        title: "Success",
+        description: "Pricing plan deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting pricing plan:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete pricing plan",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updatePricingPlanCategory = async (planName: string, newCategory: 'Intro' | 'Membership' | 'Drop-In') => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('pricing_plans')
+        .update({ plan_category: newCategory })
+        .eq('plan_name', planName);
+
+      if (error) throw error;
+
+      await fetchPricingPlans();
+
+      toast({
+        title: "Success",
+        description: "Plan category updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating pricing plan:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update pricing plan",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -181,6 +314,98 @@ const Settings = () => {
                 <li>• Final: Day {Math.round(introDuration * 0.93)} (93% of period)</li>
               </ul>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Pricing Plan Dictionary</CardTitle>
+            <CardDescription>
+              Map your Arketa pricing plan names to categories for accurate customer segmentation. This improves how we identify Intro Offers, Memberships, and Drop-In customers.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Plan name (e.g. Monthly Unlimited)"
+                value={newPlanName}
+                onChange={(e) => setNewPlanName(e.target.value)}
+                className="flex-1"
+              />
+              <Select value={newPlanCategory} onValueChange={(value: 'Intro' | 'Membership' | 'Drop-In') => setNewPlanCategory(value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Intro">Intro</SelectItem>
+                  <SelectItem value="Membership">Membership</SelectItem>
+                  <SelectItem value="Drop-In">Drop-In</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                type="number"
+                placeholder="Days"
+                value={newPlanDuration}
+                onChange={(e) => setNewPlanDuration(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-20"
+              />
+              <Button onClick={addPricingPlan} disabled={saving} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add
+              </Button>
+            </div>
+
+            {pricingPlans.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Plan Name</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Duration (Days)</TableHead>
+                    <TableHead className="w-20">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pricingPlans.map((plan) => (
+                    <TableRow key={plan.plan_name}>
+                      <TableCell className="font-medium">{plan.plan_name}</TableCell>
+                      <TableCell>
+                        <Select 
+                          value={plan.plan_category} 
+                          onValueChange={(value: 'Intro' | 'Membership' | 'Drop-In') => updatePricingPlanCategory(plan.plan_name, value)}
+                          disabled={saving}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Intro">Intro</SelectItem>
+                            <SelectItem value="Membership">Membership</SelectItem>
+                            <SelectItem value="Drop-In">Drop-In</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>{plan.plan_duration_days || '-'}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deletePricingPlan(plan.plan_name)}
+                          disabled={saving}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">
+                No pricing plans configured yet. Add your first plan above.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

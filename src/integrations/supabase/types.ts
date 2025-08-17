@@ -1173,6 +1173,30 @@ export type Database = {
           },
         ]
       }
+      pricing_plans: {
+        Row: {
+          created_at: string
+          plan_category: string
+          plan_duration_days: number | null
+          plan_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          plan_category: string
+          plan_duration_days?: number | null
+          plan_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          plan_category?: string
+          plan_duration_days?: number | null
+          plan_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       segment_analytics: {
         Row: {
           conversions: number
