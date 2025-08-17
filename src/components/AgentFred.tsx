@@ -56,7 +56,7 @@ export const AgentFred = ({ className }: AgentFredProps) => {
         return;
       }
       if (signedUrl) {
-        await conversation.startSession({ signedUrl });
+        await (conversation as any).startSession({ url: signedUrl });
         localStorage.setItem("fred_signed_url", signedUrl);
       } else {
         await conversation.startSession({ agentId });

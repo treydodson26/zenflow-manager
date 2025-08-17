@@ -944,7 +944,7 @@ Intent mapping examples (use these to choose analytics metric and args):
     for (let i = 0; i < 3; i++) {
       const resp = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 60000,
+        max_tokens: 4000,
         temperature: 0.2,
         system: instructions,
         tools: toolDefs as any,
