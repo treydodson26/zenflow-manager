@@ -575,6 +575,39 @@ export type Database = {
           },
         ]
       }
+      customer_segment_snapshots: {
+        Row: {
+          created_at: string
+          customer_id: number
+          customer_name: string
+          id: string
+          metadata: Json | null
+          segment_type: string
+          snapshot_id: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: number
+          customer_name: string
+          id?: string
+          metadata?: Json | null
+          segment_type: string
+          snapshot_id: string
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: number
+          customer_name?: string
+          id?: string
+          metadata?: Json | null
+          segment_type?: string
+          snapshot_id?: string
+          source?: string
+        }
+        Relationships: []
+      }
       customer_segments: {
         Row: {
           assigned_at: string
