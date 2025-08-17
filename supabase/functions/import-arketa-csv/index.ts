@@ -72,8 +72,22 @@ serve(async (req) => {
       }
     });
 
-    if (validationResponse.error || !validationResponse.data?.valid) {
-      result.errors.push(`CSV validation failed: ${validationResponse.data?.errors?.join(', ') || 'Unknown validation error'}`);
+    console.log('🔍 Validation response:', JSON.stringify(validationResponse, null, 2));
+
+    if (validationResponse.error) {
+      result.errors.push(`CSV validation failed: ${validationResponse.error.message}`);
+      return new Response(
+        JSON.stringify(result),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    if (!validationResponse.data?.valid) {
+      const errors = validationResponse.data?.errors || ['Unknown validation error'];
+      result.errors.push(`CSV validation failed: ${errors.join(', ')}`);
       return new Response(
         JSON.stringify(result),
         { 
