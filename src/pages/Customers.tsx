@@ -48,7 +48,7 @@ function transformCustomerData(customers: any[]): GalleryCustomer[] {
       currentDay: customer.status === "intro_trial" ? currentDay : 0,
       classesThisWeek: 0, // TODO: Calculate from bookings
       daysSinceLastVisit: daysSinceLastSeen,
-      tags: customer.tags ? customer.tags.split(",").map((t: string) => t.trim()) : [],
+      tags: Array.isArray(customer.tags) ? customer.tags : (customer.tags ? customer.tags.split(",").map((t: string) => t.trim()) : []),
       photo: undefined,
       totalLifetimeValue: customer.total_lifetime_value || 0,
       firstContactDate: customer.first_seen || customer.created_at,
@@ -73,15 +73,25 @@ export default function CustomersGallery() {
         setLoading(true);
         setError(null);
         
+        console.log('🔍 Fetching customers from Supabase...');
+        
         const { data, error } = await supabase
           .from('customers')
           .select('*')
           .order('created_at', { ascending: false });
         
+        console.log('📊 Raw customer data:', data?.length || 0, 'customers');
+        console.log('❌ Error:', error);
+        
         if (error) throw error;
         
-        setCustomers(transformCustomerData(data || []));
+        const transformedData = transformCustomerData(data || []);
+        console.log('✅ Transformed customers:', transformedData.length);
+        console.log('📋 Sample customer:', transformedData[0]);
+        
+        setCustomers(transformedData);
       } catch (err) {
+        console.error('💥 Error fetching customers:', err);
         setError(err instanceof Error ? err.message : 'Failed to load customers');
       } finally {
         setLoading(false);
