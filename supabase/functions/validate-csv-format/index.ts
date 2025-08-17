@@ -1,107 +1,159 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { parse } from "https://deno.land/std@0.168.0/encoding/csv.ts"
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { parse } from "https://deno.land/std@0.224.0/csv/parse.ts";
+
+// --- CONFIGURATION ---
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Required columns for each CSV type
+const REQUIRED_CLIENT_LIST_COLUMNS = ['first_name', 'last_name', 'client_email', 'status'];
+const REQUIRED_CLIENT_ATTENDANCE_COLUMNS = ['client_email', 'first_class_date', 'last_class_date'];
+
+// --- TYPE DEFINITIONS ---
+
+interface ClientData {
+  first_name: string;
+  last_name: string;
+  client_email: string;
+  status: string;
+  first_seen?: string;
+  last_seen?: string;
+  intro_start_date?: string;
+  intro_end_date?: string;
+  total_lifetime_value?: string;
+  [key: string]: string | undefined;
+}
+
+interface AttendanceData {
+  client_email: string;
+  first_class_date: string;
+  last_class_date: string;
+  total_classes_attended?: string;
+  total_bookings?: string;
+  [key: string]: string | undefined;
 }
 
 interface ValidationResult {
   valid: boolean;
   errors: string[];
-  client_list_data?: any[];
-  client_attendance_data?: any[];
+  client_list_data?: ClientData[];
+  client_attendance_data?: AttendanceData[];
 }
 
-// Required columns for each CSV type
-const REQUIRED_CLIENT_LIST_COLUMNS = [
-  'first_name',
-  'last_name', 
-  'client_email',
-  'status'
-];
+// --- HELPER FUNCTIONS ---
 
-const REQUIRED_CLIENT_ATTENDANCE_COLUMNS = [
-  'client_email',
-  'first_class_date',
-  'last_class_date'
-];
-
-// Optional but expected columns
-const OPTIONAL_CLIENT_LIST_COLUMNS = [
-  'client_name',
-  'phone_number',
-  'source',
-  'first_seen',
-  'last_seen',
-  'total_lifetime_value',
-  'intro_start_date',
-  'intro_end_date',
-  'conversion_date',
-  'marketing_email_opt_in',
-  'marketing_text_opt_in',
-  'agree_to_liability_waiver'
-];
-
-const OPTIONAL_CLIENT_ATTENDANCE_COLUMNS = [
-  'last_pricing_option_used',
-  'total_classes_attended',
-  'total_bookings',
-  'no_shows',
-  'cancellations'
-];
-
-function parseCSV(csvContent: string): any[] {
+/**
+ * Parses a CSV string into an array of objects.
+ */
+function parseCSV<T>(csvContent: string): T[] {
+  if (!csvContent || !csvContent.trim()) {
+    return [];
+  }
   try {
-    console.log('🔍 Parsing CSV content...');
-    console.log('CSV content preview:', csvContent.substring(0, 200));
-    
-    // Use Deno's built-in CSV parser which handles quotes, commas, and multi-line fields properly
-    const parsed = parse(csvContent, {
-      skipFirstRow: false, // We'll handle the header manually
-      strip: true // Remove surrounding whitespace
+    const records = parse(csvContent, {
+      skipFirstRow: true, // Uses the first row for headers implicitly
+      strip: true,
     });
-    
-    if (parsed.length < 2) {
-      console.log('❌ CSV has insufficient rows:', parsed.length);
-      return []; // Need at least header + 1 data row
-    }
-    
-    // First row is headers
-    const headers = parsed[0] as string[];
-    console.log('📋 CSV headers:', headers);
-    
-    // Convert remaining rows to objects
-    const data = [];
-    for (let i = 1; i < parsed.length; i++) {
-      const values = parsed[i] as string[];
-      const row: any = {};
-      
-      headers.forEach((header, index) => {
-        row[header] = values[index] || '';
-      });
-      
-      data.push(row);
-    }
-    
-    console.log(`✅ Successfully parsed ${data.length} data rows`);
-    return data;
+    return records as T[];
   } catch (error) {
     console.error('❌ Error parsing CSV:', error);
     throw new Error(`CSV parsing failed: ${error.message}`);
   }
 }
 
-function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+/**
+ * Validates that all required headers are present.
+ */
+function validateHeaders(actualHeaders: string[], requiredHeaders: string[], fileType: string): string[] {
+  const errors: string[] = [];
+  const headerSet = new Set(actualHeaders);
+  for (const col of requiredHeaders) {
+    if (!headerSet.has(col)) {
+      errors.push(`${fileType} is missing required column: ${col}`);
+    }
+  }
+  return errors;
 }
 
-function validateDate(dateString: string): boolean {
-  if (!dateString) return true; // Allow empty dates
-  const date = new Date(dateString);
-  return !isNaN(date.getTime()) && dateString.length >= 8; // Basic date validation
+const validateEmail = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validateDate = (dateStr: string): boolean => dateStr ? !isNaN(new Date(dateStr).getTime()) : true;
+const validateNumber = (numStr: string): boolean => numStr ? !isNaN(parseFloat(numStr)) : true;
+
+/**
+ * Validates the data quality of the client list.
+ */
+function validateClientListData(data: ClientData[]): string[] {
+  const errors: string[] = [];
+  // Sample the first 100 rows to avoid overwhelming the user
+  data.slice(0, 100).forEach((row, i) => {
+    const rowNum = i + 2; // CSV row number (1-based index + header)
+    if (!row.first_name?.trim()) errors.push(`Client List Row ${rowNum}: first_name is required.`);
+    if (!row.last_name?.trim()) errors.push(`Client List Row ${rowNum}: last_name is required.`);
+    if (!row.client_email?.trim()) {
+      errors.push(`Client List Row ${rowNum}: client_email is required.`);
+    } else if (!validateEmail(row.client_email)) {
+      errors.push(`Client List Row ${rowNum}: invalid email format: ${row.client_email}`);
+    }
+
+    // Optional fields validation
+    if (!validateDate(row.first_seen!)) errors.push(`Client List Row ${rowNum}: invalid first_seen date.`);
+    if (!validateDate(row.last_seen!)) errors.push(`Client List Row ${rowNum}: invalid last_seen date.`);
+    if (!validateDate(row.intro_start_date!)) errors.push(`Client List Row ${rowNum}: invalid intro_start_date.`);
+    if (!validateDate(row.intro_end_date!)) errors.push(`Client List Row ${rowNum}: invalid intro_end_date.`);
+    if (!validateNumber(row.total_lifetime_value!)) errors.push(`Client List Row ${rowNum}: total_lifetime_value must be numeric.`);
+  });
+  return errors;
 }
+
+/**
+ * Validates the data quality of the client attendance list.
+ */
+function validateAttendanceData(data: AttendanceData[]): string[] {
+  const errors: string[] = [];
+  data.slice(0, 100).forEach((row, i) => {
+    const rowNum = i + 2;
+    if (!row.client_email?.trim()) {
+      errors.push(`Attendance Row ${rowNum}: client_email is required.`);
+    } else if (!validateEmail(row.client_email)) {
+      errors.push(`Attendance Row ${rowNum}: invalid email format: ${row.client_email}`);
+    }
+    
+    if (!validateDate(row.first_class_date)) errors.push(`Attendance Row ${rowNum}: invalid first_class_date.`);
+    if (!validateDate(row.last_class_date)) errors.push(`Attendance Row ${rowNum}: invalid last_class_date.`);
+    if (!validateNumber(row.total_classes_attended!)) errors.push(`Attendance Row ${rowNum}: total_classes_attended must be numeric.`);
+    if (!validateNumber(row.total_bookings!)) errors.push(`Attendance Row ${rowNum}: total_bookings must be numeric.`);
+  });
+  return errors;
+}
+
+/**
+ * Cross-validates emails between the client list and attendance data.
+ */
+function crossValidateEmails(clientData: ClientData[], attendanceData: AttendanceData[]): string[] {
+  const errors: string[] = [];
+  const clientEmails = new Set(clientData.map(c => c.client_email?.toLowerCase().trim()).filter(Boolean));
+  const attendanceEmails = new Set(attendanceData.map(a => a.client_email?.toLowerCase().trim()).filter(Boolean));
+
+  const missingInAttendance = [...clientEmails].filter(email => !attendanceEmails.has(email));
+  if (missingInAttendance.length > 0) {
+    const sample = missingInAttendance.slice(0, 5).join(', ');
+    errors.push(`${missingInAttendance.length} client(s) are missing from the attendance file. Sample: ${sample}`);
+  }
+
+  const extraInAttendance = [...attendanceEmails].filter(email => !clientEmails.has(email));
+  if (extraInAttendance.length > 0) {
+    const sample = extraInAttendance.slice(0, 5).join(', ');
+    errors.push(`${extraInAttendance.length} email(s) in the attendance file are not in the client list. Sample: ${sample}`);
+  }
+  
+  return errors;
+}
+
+
+// --- MAIN SERVER LOGIC ---
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -110,195 +162,67 @@ serve(async (req) => {
 
   try {
     const { client_list_content, client_attendance_content } = await req.json();
+    let allErrors: string[] = [];
     
-    console.log('📥 Received validation request');
-    console.log('Client list content length:', client_list_content?.length || 0);
-    console.log('Client attendance content length:', client_attendance_content?.length || 0);
-    
-    const result: ValidationResult = {
-      valid: true,
-      errors: []
-    };
-
     if (!client_list_content || !client_attendance_content) {
-      result.valid = false;
-      result.errors.push('Both client_list_content and client_attendance_content are required');
-      console.log('❌ Missing CSV content - client_list:', !!client_list_content, 'client_attendance:', !!client_attendance_content);
+      allErrors.push('Both client_list_content and client_attendance_content are required.');
+      return new Response(JSON.stringify({ valid: false, errors: allErrors }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 1. Parse CSV content
+    const clientData = parseCSV<ClientData>(client_list_content);
+    const attendanceData = parseCSV<AttendanceData>(client_attendance_content);
+    
+    // 2. Validate file content exists
+    if (clientData.length === 0) allErrors.push('Client list CSV is empty or has no data rows.');
+    if (attendanceData.length === 0) allErrors.push('Client attendance CSV is empty or has no data rows.');
+
+    if (allErrors.length === 0) {
+      // 3. Validate headers
+      const clientHeaders = Object.keys(clientData[0]);
+      const attendanceHeaders = Object.keys(attendanceData[0]);
+      allErrors.push(...validateHeaders(clientHeaders, REQUIRED_CLIENT_LIST_COLUMNS, 'Client list'));
+      allErrors.push(...validateHeaders(attendanceHeaders, REQUIRED_CLIENT_ATTENDANCE_COLUMNS, 'Client attendance'));
       
-      return new Response(
-        JSON.stringify(result),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    console.log('🔍 Validating CSV format and content...');
-
-    // Parse CSV files
-    try {
-      result.client_list_data = parseCSV(client_list_content);
-      result.client_attendance_data = parseCSV(client_attendance_content);
-    } catch (error) {
-      result.valid = false;
-      result.errors.push(`CSV parsing error: ${error.message}`);
-      
-      return new Response(
-        JSON.stringify(result),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Validate client list structure
-    if (result.client_list_data.length === 0) {
-      result.valid = false;
-      result.errors.push('Client list CSV is empty or has no data rows');
-    } else {
-      const clientHeaders = Object.keys(result.client_list_data[0]);
-      
-      // Check required columns
-      for (const requiredCol of REQUIRED_CLIENT_LIST_COLUMNS) {
-        if (!clientHeaders.includes(requiredCol)) {
-          result.valid = false;
-          result.errors.push(`Client list missing required column: ${requiredCol}`);
-        }
-      }
-
-      // Validate data quality for client list
-      for (let i = 0; i < Math.min(result.client_list_data.length, 100); i++) { // Sample first 100 rows
-        const row = result.client_list_data[i];
-        const rowNum = i + 2; // Account for header row
-        
-        // Required field validation
-        if (!row.first_name?.trim()) {
-          result.errors.push(`Row ${rowNum}: first_name is required`);
-        }
-        if (!row.last_name?.trim()) {
-          result.errors.push(`Row ${rowNum}: last_name is required`);
-        }
-        if (!row.client_email?.trim()) {
-          result.errors.push(`Row ${rowNum}: client_email is required`);
-        } else if (!validateEmail(row.client_email)) {
-          result.errors.push(`Row ${rowNum}: invalid email format: ${row.client_email}`);
-        }
-        
-        // Date validation
-        if (row.first_seen && !validateDate(row.first_seen)) {
-          result.errors.push(`Row ${rowNum}: invalid first_seen date: ${row.first_seen}`);
-        }
-        if (row.last_seen && !validateDate(row.last_seen)) {
-          result.errors.push(`Row ${rowNum}: invalid last_seen date: ${row.last_seen}`);
-        }
-        if (row.intro_start_date && !validateDate(row.intro_start_date)) {
-          result.errors.push(`Row ${rowNum}: invalid intro_start_date: ${row.intro_start_date}`);
-        }
-        if (row.intro_end_date && !validateDate(row.intro_end_date)) {
-          result.errors.push(`Row ${rowNum}: invalid intro_end_date: ${row.intro_end_date}`);
-        }
-        
-        // Numeric validation
-        if (row.total_lifetime_value && isNaN(parseFloat(row.total_lifetime_value))) {
-          result.errors.push(`Row ${rowNum}: total_lifetime_value must be numeric: ${row.total_lifetime_value}`);
-        }
+      // 4. Validate data quality (only if headers are valid)
+      if (allErrors.length === 0) {
+        allErrors.push(...validateClientListData(clientData));
+        allErrors.push(...validateAttendanceData(attendanceData));
+        allErrors.push(...crossValidateEmails(clientData, attendanceData));
       }
     }
 
-    // Validate client attendance structure
-    if (result.client_attendance_data.length === 0) {
-      result.valid = false;
-      result.errors.push('Client attendance CSV is empty or has no data rows');
-    } else {
-      const attendanceHeaders = Object.keys(result.client_attendance_data[0]);
-      
-      // Check required columns
-      for (const requiredCol of REQUIRED_CLIENT_ATTENDANCE_COLUMNS) {
-        if (!attendanceHeaders.includes(requiredCol)) {
-          result.valid = false;
-          result.errors.push(`Client attendance missing required column: ${requiredCol}`);
-        }
-      }
-
-      // Validate data quality for attendance
-      for (let i = 0; i < Math.min(result.client_attendance_data.length, 100); i++) { // Sample first 100 rows
-        const row = result.client_attendance_data[i];
-        const rowNum = i + 2; // Account for header row
-        
-        if (!row.client_email?.trim()) {
-          result.errors.push(`Attendance row ${rowNum}: client_email is required`);
-        } else if (!validateEmail(row.client_email)) {
-          result.errors.push(`Attendance row ${rowNum}: invalid email format: ${row.client_email}`);
-        }
-        
-        if (row.first_class_date && !validateDate(row.first_class_date)) {
-          result.errors.push(`Attendance row ${rowNum}: invalid first_class_date: ${row.first_class_date}`);
-        }
-        if (row.last_class_date && !validateDate(row.last_class_date)) {
-          result.errors.push(`Attendance row ${rowNum}: invalid last_class_date: ${row.last_class_date}`);
-        }
-        
-        // Numeric validation for attendance metrics
-        if (row.total_classes_attended && isNaN(parseInt(row.total_classes_attended))) {
-          result.errors.push(`Attendance row ${rowNum}: total_classes_attended must be numeric`);
-        }
-        if (row.total_bookings && isNaN(parseInt(row.total_bookings))) {
-          result.errors.push(`Attendance row ${rowNum}: total_bookings must be numeric`);
-        }
-      }
+    // 5. Finalize the result
+    const MAX_ERRORS_TO_SHOW = 50;
+    if (allErrors.length > MAX_ERRORS_TO_SHOW) {
+      allErrors = allErrors.slice(0, MAX_ERRORS_TO_SHOW);
+      allErrors.push(`... and more. Please fix the first ${MAX_ERRORS_TO_SHOW} issues.`);
     }
 
-    // Cross-validation: ensure client emails match between files
-    if (result.client_list_data && result.client_attendance_data) {
-      const clientEmails = new Set(result.client_list_data.map(c => c.client_email?.toLowerCase().trim()));
-      const attendanceEmails = new Set(result.client_attendance_data.map(a => a.client_email?.toLowerCase().trim()));
-      
-      const missingInAttendance = Array.from(clientEmails).filter(email => !attendanceEmails.has(email));
-      const extraInAttendance = Array.from(attendanceEmails).filter(email => !clientEmails.has(email));
-      
-      if (missingInAttendance.length > 0 && missingInAttendance.length < 10) {
-        result.errors.push(`Some clients missing attendance data: ${missingInAttendance.join(', ')}`);
-      }
-      if (extraInAttendance.length > 0 && extraInAttendance.length < 10) {
-        result.errors.push(`Attendance data for unknown clients: ${extraInAttendance.join(', ')}`);
-      }
-    }
+    const result: ValidationResult = {
+      valid: allErrors.length === 0,
+      errors: allErrors,
+      client_list_data: allErrors.length === 0 ? clientData : undefined,
+      client_attendance_data: allErrors.length === 0 ? attendanceData : undefined,
+    };
+    
+    console.log(result.valid ? '✅ Validation successful' : `❌ Validation failed with ${allErrors.length} errors.`);
 
-    // Stop validation if we have too many errors
-    if (result.errors.length > 50) {
-      result.valid = false;
-      result.errors = result.errors.slice(0, 50);
-      result.errors.push('... and more errors. Please fix the above issues first.');
-    }
-
-    if (result.errors.length > 0) {
-      result.valid = false;
-      console.log(`❌ Validation failed with ${result.errors.length} errors`);
-    } else {
-      console.log(`✅ Validation passed: ${result.client_list_data.length} clients, ${result.client_attendance_data.length} attendance records`);
-    }
-
-    return new Response(
-      JSON.stringify(result),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
   } catch (error) {
-    console.error('Error in CSV validation:', error);
-    
-    return new Response(
-      JSON.stringify({
-        valid: false,
-        errors: [`Validation system error: ${error.message}`]
-      }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+    console.error('Critical error in validation function:', error);
+    return new Response(JSON.stringify({
+      valid: false,
+      errors: [`Validation system error: ${error.message}`]
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
-})
+});
