@@ -942,17 +942,32 @@ Intent mapping examples (use these to choose analytics metric and args):
 
     let finalText = "";
     for (let i = 0; i < 3; i++) {
-      const resp = await anthropic.messages.create({
+      // Streaming request to satisfy Anthropic time limits
+      const stream = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
         max_tokens: 4000,
         temperature: 0.2,
         system: instructions,
         tools: toolDefs as any,
         messages: toolLoopMessages as any,
+        stream: true,
       });
 
-      const toolUses = (resp.content || []).filter((c: any) => c.type === "tool_use");
-      const textParts = (resp.content || []).filter((c: any) => c.type === "text").map((c: any) => c.text).join("\n").trim();
+      let streamedMessage: any = null;
+      let accumulatedText = "";
+      for await (const event of stream as any) {
+        if (event.type === "content_block_delta" && event.delta?.type === "text_delta") {
+          accumulatedText += event.delta.text || "";
+        }
+        if (event.type === "message") {
+          streamedMessage = event.message;
+        }
+      }
+
+      const respContent: any[] = (streamedMessage?.content as any[]) || (accumulatedText ? [{ type: "text", text: accumulatedText }] : []);
+
+      const toolUses = (respContent || []).filter((c: any) => c.type === "tool_use");
+      const textParts = (respContent || []).filter((c: any) => c.type === "text").map((c: any) => c.text).join("\n").trim();
 
       if (toolUses.length === 0) {
         finalText = textParts || finalText;
@@ -960,7 +975,7 @@ Intent mapping examples (use these to choose analytics metric and args):
       }
 
       // Add assistant content with tool_use calls
-      toolLoopMessages.push({ role: "assistant", content: resp.content as any });
+      toolLoopMessages.push({ role: "assistant", content: respContent as any });
 
       // Execute tools
       const toolResults: any[] = [];
