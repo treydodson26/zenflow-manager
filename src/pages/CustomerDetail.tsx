@@ -332,44 +332,64 @@ export default function CustomerDetail() {
     <TooltipProvider>
       <div className="space-y-6">
         {/* Header */}
-        <Card className="border-none bg-transparent shadow-none">
-          <CardHeader className="p-0">
-            <div className="rounded-2xl bg-primary text-primary-foreground p-6 sm:p-8">
-              <div className="mb-6 flex items-center justify-between">
-                <Link to="/customers">
-                  <Button variant="secondary">
-                    <ArrowLeft className="mr-2" /> Back to all customers
-                  </Button>
-                </Link>
-              </div>
+        {/* Dark Header Section */}
+        <div className="bg-slate-900 text-white rounded-lg p-6 mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <Link to="/customers">
+              <Button variant="secondary" className="bg-yellow-400 text-slate-900 hover:bg-yellow-300">
+                <ArrowLeft className="mr-2 w-4 h-4" /> Back to all customers
+              </Button>
+            </Link>
+            <Button className="bg-yellow-400 text-slate-900 hover:bg-yellow-300">
+              View Resources
+            </Button>
+          </div>
 
-              <div className="flex items-start gap-4">
-                <Avatar className="h-16 w-16 ring-1 ring-primary-foreground/25 bg-foreground">
-                  <AvatarImage src={customer.avatar_url} alt={`${fullName} avatar`} />
-                  <AvatarFallback className="text-primary-foreground">
-                    {customer.first_name[0]}
-                    {customer.last_name[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="space-y-2">
-                  <h1 className="text-2xl font-semibold leading-tight">{fullName}</h1>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {journeyBadge}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="inline-flex items-center gap-2 rounded-md bg-primary-foreground/10 px-2.5 py-1 text-xs">
-                          <span>Engagement</span>
-                          <EngagementDots level={customer.engagement} />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>High = likely to convert/retain</TooltipContent>
-                    </Tooltip>
+          <div className="flex items-start gap-6">
+            <Avatar className="h-20 w-20 ring-2 ring-green-500">
+              <AvatarImage src={customer.avatar_url} alt={`${fullName} avatar`} />
+              <AvatarFallback className="bg-slate-700 text-white text-xl">
+                {customer.first_name[0]}{customer.last_name[0]}
+              </AvatarFallback>
+            </Avatar>
+            
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold">{fullName}</h1>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-green-400">On Track</span>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-8 mt-4">
+                <div>
+                  <div className="text-sm text-slate-400">Stage</div>
+                  <div className="bg-blue-600 text-blue-100 px-3 py-1 rounded-full text-sm font-medium inline-block mt-1">
+                    {customer.status === 'intro' ? 'Intro Offer' : customer.status === 'member' ? 'Active Member' : 'Prospect'}
                   </div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-400">LTV</div>
+                  <div className="text-2xl font-bold text-white mt-1">
+                    {formatCurrency(customer.total_lifetime_value || 0)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-400">Last Contact</div>
+                  <div className="text-white mt-1">{timeSince(customer.last_seen)}</div>
                 </div>
               </div>
             </div>
-          </CardHeader>
-        </Card>
+          </div>
+          
+          <div className="mt-6 pt-6 border-t border-slate-700">
+            <div className="text-sm text-slate-400 mb-2">Bio</div>
+            <div className="text-white">
+              {customer.notes || `Yoga student at Talo Yoga. ${customer.status === 'intro' ? 'Currently in intro offer period.' : 'Active member of our community.'}`}
+            </div>
+          </div>
+        </div>
 
         {daysRemaining <= 3 && (
           <Alert>
@@ -388,9 +408,27 @@ export default function CustomerDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           <div className="lg:col-span-2">
-            <div className="mb-6">
-              <CustomerAIChat customer={customer} />
-            </div>
+            {/* AI Chat Interface */}
+            <Card className="mb-6">
+              <CardHeader className="flex flex-row items-center gap-3 pb-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center">
+                  <span className="text-white font-semibold text-sm">AI</span>
+                </div>
+                <div>
+                  <CardTitle className="text-lg">{fullName}'s AI Assistant</CardTitle>
+                  <CardDescription>
+                    Get insights about {customer.first_name}'s journey and engagement patterns
+                  </CardDescription>
+                </div>
+                <Button size="sm" variant="outline" className="ml-auto">
+                  Load Demo
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <CustomerAIChat customer={customer} />
+              </CardContent>
+            </Card>
+            
             <Tabs defaultValue="classes" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="classes">Classes</TabsTrigger>

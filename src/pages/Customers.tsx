@@ -49,7 +49,10 @@ function transformCustomerData(customers: any[]): GalleryCustomer[] {
       classesThisWeek: 0, // TODO: Calculate from bookings
       daysSinceLastVisit: daysSinceLastSeen,
       tags: customer.tags ? customer.tags.split(",").map((t: string) => t.trim()) : [],
-      photo: undefined
+      photo: undefined,
+      totalLifetimeValue: customer.total_lifetime_value || 0,
+      firstContactDate: customer.first_seen || customer.created_at,
+      lastInteractionDate: customer.last_seen || customer.updated_at
     };
   });
 }
