@@ -56,3 +56,12 @@ verify_jwt = false
 
 [functions.get-intro-duration]
 verify_jwt = false
+
+[functions.process-sequence-automation]
+verify_jwt = false
+
+[functions.start-customer-journey]
+verify_jwt = false
+
+[functions.send-twilio-whatsapp]
+verify_jwt = false

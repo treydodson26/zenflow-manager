@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Save, Plus, Trash2, RefreshCw } from "lucide-react";
+import { Save, Plus, Trash2, RefreshCw, Play, Users, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MessageSequencesSkeleton, ErrorState, EmptyState } from "@/components/ui/loading-skeletons";
 
@@ -29,6 +29,7 @@ const MessageSequences = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     document.title = "Message Sequences | Talo Yoga";
@@ -116,6 +117,53 @@ const MessageSequences = () => {
     setEditingId(null);
   };
 
+  const runSequenceAutomation = async () => {
+    setProcessing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('process-sequence-automation', {
+        body: { triggered_by: 'manual' }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Automation Complete",
+        description: `Processed ${data.processed} customer journeys, queued ${data.queued} messages`,
+      });
+    } catch (error) {
+      console.error('Automation error:', error);
+      toast({
+        title: "Automation Failed",
+        description: "Failed to run sequence automation",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const startCustomerJourney = async (customerId: number, segmentType: string = 'prospect') => {
+    try {
+      const { data, error } = await supabase.functions.invoke('start-customer-journey', {
+        body: { customer_id: customerId, segment_type: segmentType }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Journey Started",
+        description: `Customer journey initiated for customer ${customerId}`,
+      });
+    } catch (error) {
+      console.error('Start journey error:', error);
+      toast({
+        title: "Failed to Start Journey",
+        description: "Could not start customer journey",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return <MessageSequencesSkeleton />;
   }
@@ -142,16 +190,107 @@ const MessageSequences = () => {
             Configure your customer nurture sequence timing and message templates
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => fetchSequences(true)}
-          disabled={refreshing}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => fetchSequences(true)}
+            disabled={refreshing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button
+            onClick={runSequenceAutomation}
+            disabled={processing}
+            className="flex items-center gap-2"
+          >
+            <Play className={`h-4 w-4 ${processing ? 'animate-spin' : ''}`} />
+            {processing ? 'Processing...' : 'Run Automation'}
+          </Button>
+        </div>
       </div>
+
+      {/* Automation Status Overview */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Sequences</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{sequences.filter(s => s.active).length}</div>
+            <p className="text-xs text-muted-foreground">
+              of {sequences.length} total sequences
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Automation Status</CardTitle>
+            <Play className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">Running</div>
+            <p className="text-xs text-muted-foreground">
+              Every 15 min (6 AM-10 PM)
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Message Types</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span>Email:</span>
+                <span>{sequences.filter(s => s.message_type === 'email').length}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>WhatsApp:</span>
+                <span>{sequences.filter(s => s.message_type === 'whatsapp').length}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Journey Days</CardTitle>
+            <RefreshCw className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {sequences.length > 0 ? Math.max(...sequences.map(s => s.day)) : 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              day journey span
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* How it Works */}
+      <Card className="bg-muted/30">
+        <CardHeader>
+          <CardTitle className="text-lg">🤖 How Automated Sequences Work</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>
+            <strong>Automatic Processing:</strong> Every 15 minutes during business hours (6 AM - 10 PM), the system checks which customers are due for their next message.
+          </p>
+          <p>
+            <strong>Customer Journey Tracking:</strong> Each customer has a journey progress that tracks which day they're on and when their next message is due.
+          </p>
+          <p>
+            <strong>Personalization:</strong> Messages automatically include {`{first_name}`}, {`{last_name}`}, and {`{email}`} placeholders that get replaced with actual customer data.
+          </p>
+          <p>
+            <strong>Opt-in Compliance:</strong> Only sends messages to customers who have opted in for marketing emails/texts.
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6">
         {sequences.map((sequence) => (
