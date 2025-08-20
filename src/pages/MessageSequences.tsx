@@ -233,7 +233,7 @@ const MessageSequences = () => {
           <CardContent>
             <div className="text-2xl font-bold text-green-600">Running</div>
             <p className="text-xs text-muted-foreground">
-              Every 15 min (6 AM-10 PM)
+              Queues for approval ✓
             </p>
           </CardContent>
         </Card>
@@ -278,16 +278,19 @@ const MessageSequences = () => {
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>
-            <strong>Automatic Processing:</strong> Every 15 minutes during business hours (6 AM - 10 PM), the system checks which customers are due for their next message.
+            <strong>⚠️ APPROVAL REQUIRED:</strong> All messages now require manual approval before being sent to customers.
           </p>
           <p>
-            <strong>Customer Journey Tracking:</strong> Each customer has a journey progress that tracks which day they're on and when their next message is due.
+            <strong>Automatic Processing:</strong> Every 15 minutes during business hours (6 AM - 10 PM), the system checks which customers are due for their next message and queues them for approval.
+          </p>
+          <p>
+            <strong>Review Process:</strong> Visit the <a href="/approval" className="text-primary hover:underline">Message Approval</a> page to review, approve, or reject queued messages.
           </p>
           <p>
             <strong>Personalization:</strong> Messages automatically include {`{first_name}`}, {`{last_name}`}, and {`{email}`} placeholders that get replaced with actual customer data.
           </p>
           <p>
-            <strong>Opt-in Compliance:</strong> Only sends messages to customers who have opted in for marketing emails/texts.
+            <strong>Opt-in Compliance:</strong> Only queues messages for customers who have opted in for marketing emails/texts.
           </p>
         </CardContent>
       </Card>

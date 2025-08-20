@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Leaf, LayoutDashboard, Users, Megaphone, GraduationCap, ListTree, Settings, Upload, MessageSquare } from "lucide-react";
+import { Leaf, LayoutDashboard, Users, Megaphone, GraduationCap, ListTree, Settings, Upload, MessageSquare, Check } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +26,7 @@ const growthItems = [
   { title: "Segments", url: "/segments", icon: ListTree },
   { title: "Marketing Hub", url: "/marketing", icon: Megaphone },
   { title: "Message Sequences", url: "/sequences", icon: MessageSquare },
+  { title: "Message Approval", url: "/approval", icon: Check },
 ];
 
 export function AppSidebar() {

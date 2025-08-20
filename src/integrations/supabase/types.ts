@@ -1224,6 +1224,9 @@ export type Database = {
       }
       message_queue: {
         Row: {
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           attempts: number
           content: string
           created_at: string
@@ -1233,6 +1236,7 @@ export type Database = {
           message_type: string
           recipient_email: string | null
           recipient_phone: string | null
+          review_notes: string | null
           scheduled_for: string
           sent_at: string | null
           sequence_id: number
@@ -1241,6 +1245,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           attempts?: number
           content: string
           created_at?: string
@@ -1250,6 +1257,7 @@ export type Database = {
           message_type: string
           recipient_email?: string | null
           recipient_phone?: string | null
+          review_notes?: string | null
           scheduled_for: string
           sent_at?: string | null
           sequence_id: number
@@ -1258,6 +1266,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           attempts?: number
           content?: string
           created_at?: string
@@ -1267,6 +1278,7 @@ export type Database = {
           message_type?: string
           recipient_email?: string | null
           recipient_phone?: string | null
+          review_notes?: string | null
           scheduled_for?: string
           sent_at?: string | null
           sequence_id?: number
@@ -1625,6 +1637,14 @@ export type Database = {
       }
     }
     Functions: {
+      approve_queued_message: {
+        Args: {
+          approver_id_param: string
+          message_id_param: string
+          notes_param?: string
+        }
+        Returns: boolean
+      }
       assign_customer_segment: {
         Args: { customer_id_param: number }
         Returns: string
@@ -1636,6 +1656,14 @@ export type Database = {
       initialize_customer_journey: {
         Args: { customer_id_param: number; segment_type_param?: string }
         Returns: string
+      }
+      reject_queued_message: {
+        Args: {
+          message_id_param: string
+          rejection_reason_param: string
+          reviewer_id_param: string
+        }
+        Returns: boolean
       }
     }
     Enums: {

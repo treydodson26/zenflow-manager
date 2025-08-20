@@ -19,6 +19,7 @@ const ImageStudio = lazy(() => import("./pages/ImageStudio"));
 const MarketingHub = lazy(() => import("./pages/MarketingHub"));
 const InstructorHub = lazy(() => import("./pages/InstructorHub"));
 const MessageSequences = lazy(() => import("./pages/MessageSequences"));
+const MessageApproval = lazy(() => import("./pages/MessageApproval"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -53,6 +54,7 @@ const App = () => (
               <Route path="/marketing" element={<MarketingHub />} />
               <Route path="/instructor-hub" element={<InstructorHub />} />
               <Route path="/sequences" element={<MessageSequences />} />
+              <Route path="/approval" element={<MessageApproval />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/customer/:id" element={<CustomerDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

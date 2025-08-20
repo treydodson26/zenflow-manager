@@ -156,7 +156,7 @@ serve(async (req) => {
         continue;
       }
 
-      // Queue the message for sending
+      // Queue the message for APPROVAL (not sending immediately)
       const { error: queueError } = await supabase
         .from('message_queue')
         .insert({
@@ -167,8 +167,9 @@ serve(async (req) => {
           recipient_phone: ['sms', 'whatsapp'].includes(nextSequence.message_type) ? customer.phone_number : null,
           subject: personalizedSubject,
           content: personalizedContent,
-          scheduled_for: new Date().toISOString(), // Send immediately
-          status: 'pending'
+          scheduled_for: new Date().toISOString(),
+          status: 'queued', // Not pending - waiting for approval
+          approval_status: 'pending_review' // NEW: Requires approval
         });
 
       if (queueError) {
@@ -183,8 +184,8 @@ serve(async (req) => {
       console.log(`Queued ${nextSequence.message_type} message for ${customer.first_name} ${customer.last_name} (Day ${nextSequence.day})`);
     }
 
-    // 5. Process the message queue (send queued messages)
-    await processMessageQueue();
+    // 5. Process ONLY APPROVED messages from the queue
+    await processApprovedMessages();
 
     console.log(`✅ Sequence automation complete. Processed ${processed} journeys, queued ${queued} messages`);
 
@@ -240,15 +241,16 @@ async function updateJourneyProgress(
     .eq('id', journey.id);
 }
 
-// Helper function to process queued messages
-async function processMessageQueue() {
-  console.log("📤 Processing message queue...");
+// Helper function to process APPROVED messages only
+async function processApprovedMessages() {
+  console.log("📤 Processing APPROVED messages only...");
   
-  // Get pending messages
+  // Get only approved messages that are ready to send
   const { data: queuedMessages, error } = await supabase
     .from('message_queue')
     .select('*')
     .eq('status', 'pending')
+    .eq('approval_status', 'approved') // ONLY approved messages
     .lte('scheduled_for', new Date().toISOString())
     .limit(50); // Process in batches
 
