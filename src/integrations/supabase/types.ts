@@ -292,6 +292,69 @@ export type Database = {
         }
         Relationships: []
       }
+      clients: {
+        Row: {
+          address: string | null
+          agree_to_liability_waiver: boolean | null
+          birthday: string | null
+          client_email: string
+          client_name: string | null
+          created_at: string | null
+          first_name: string
+          first_seen: string
+          id: string
+          last_name: string | null
+          last_seen: string | null
+          marketing_email_opt_in: boolean | null
+          marketing_text_opt_in: boolean | null
+          phone_number: string | null
+          pre_arketa_milestone_count: number | null
+          tags: Json | null
+          transactional_text_opt_in: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          agree_to_liability_waiver?: boolean | null
+          birthday?: string | null
+          client_email: string
+          client_name?: string | null
+          created_at?: string | null
+          first_name: string
+          first_seen: string
+          id?: string
+          last_name?: string | null
+          last_seen?: string | null
+          marketing_email_opt_in?: boolean | null
+          marketing_text_opt_in?: boolean | null
+          phone_number?: string | null
+          pre_arketa_milestone_count?: number | null
+          tags?: Json | null
+          transactional_text_opt_in?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          agree_to_liability_waiver?: boolean | null
+          birthday?: string | null
+          client_email?: string
+          client_name?: string | null
+          created_at?: string | null
+          first_name?: string
+          first_seen?: string
+          id?: string
+          last_name?: string | null
+          last_seen?: string | null
+          marketing_email_opt_in?: boolean | null
+          marketing_text_opt_in?: boolean | null
+          phone_number?: string | null
+          pre_arketa_milestone_count?: number | null
+          tags?: Json | null
+          transactional_text_opt_in?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       communications_log: {
         Row: {
           content: string
@@ -525,6 +588,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      customer_journey_progress: {
+        Row: {
+          created_at: string
+          current_day: number
+          customer_id: number
+          id: string
+          journey_status: string
+          last_message_sent_day: number | null
+          next_message_due_date: string | null
+          segment_type: string
+          sequence_start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_day?: number
+          customer_id: number
+          id?: string
+          journey_status?: string
+          last_message_sent_day?: number | null
+          next_message_due_date?: string | null
+          segment_type?: string
+          sequence_start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_day?: number
+          customer_id?: number
+          id?: string
+          journey_status?: string
+          last_message_sent_day?: number | null
+          next_message_due_date?: string | null
+          segment_type?: string
+          sequence_start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       customer_notes: {
         Row: {
@@ -1120,6 +1222,60 @@ export type Database = {
         }
         Relationships: []
       }
+      message_queue: {
+        Row: {
+          attempts: number
+          content: string
+          created_at: string
+          customer_id: number
+          error_message: string | null
+          id: string
+          message_type: string
+          recipient_email: string | null
+          recipient_phone: string | null
+          scheduled_for: string
+          sent_at: string | null
+          sequence_id: number
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          content: string
+          created_at?: string
+          customer_id: number
+          error_message?: string | null
+          id?: string
+          message_type: string
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          scheduled_for: string
+          sent_at?: string | null
+          sequence_id: number
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          content?: string
+          created_at?: string
+          customer_id?: number
+          error_message?: string | null
+          id?: string
+          message_type?: string
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          scheduled_for?: string
+          sent_at?: string | null
+          sequence_id?: number
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       message_sequences: {
         Row: {
           active: boolean | null
@@ -1476,6 +1632,10 @@ export type Database = {
       get_customer_stats_overview: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      initialize_customer_journey: {
+        Args: { customer_id_param: number; segment_type_param?: string }
+        Returns: string
       }
     }
     Enums: {
