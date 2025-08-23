@@ -41,7 +41,7 @@ interface Props {
 }
 
 export default function CustomerGroupSection({ group, onCustomersUpdated }: Props) {
-  const [selectedCustomers, setSelectedCustomers] = useState<Record<string, Set<number>>>({});
+  const [selectedCustomers, setSelectedCustomers] = useState<Record<string, Set<string>>>({});
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerConfig, setComposerConfig] = useState<{
     customers: Customer[];
@@ -50,7 +50,7 @@ export default function CustomerGroupSection({ group, onCustomersUpdated }: Prop
     sectionTitle: string;
   } | null>(null);
 
-  const toggleCustomerSelection = (sectionTitle: string, customerId: number) => {
+  const toggleCustomerSelection = (sectionTitle: string, customerId: string) => {
     setSelectedCustomers(prev => {
       const newState = { ...prev };
       if (!newState[sectionTitle]) {
