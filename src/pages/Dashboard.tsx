@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import KPITrendCard from "@/components/dashboard/KPITrendCard";
-import StudioCalendar from "@/components/calendar/StudioCalendar";
 import { Card, CardContent } from "@/components/ui/card";
 import StatCard from "@/components/dashboard/StatCard";
 import { DashboardSkeleton, ErrorState } from "@/components/ui/loading-skeletons";
+import HomeChatHero from "@/components/chat/HomeChatHero";
+import { Calendar, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Dashboard = () => {
   type Metrics = {
@@ -114,66 +116,165 @@ const Dashboard = () => {
     return <ErrorState title="Dashboard Error" message={error} onRetry={retryLoadMetrics} />;
   }
 
+  const currentDate = new Date().toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+
   return (
-    <div className="space-y-6 lg:space-y-8">
-      <section className="animate-fade-in">
-        <h1 className="text-3xl font-semibold tracking-tight">Studio Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Pulse of your studio today.</p>
-      </section>
+    <div className="min-h-screen bg-[#FAF8F3]">
+      {/* Header */}
+      <div className="flex items-center justify-between p-6 bg-white border-b border-[#E5E7EB]">
+        <h1 className="text-2xl font-semibold text-[#1F2937]">Welcome back, Emily</h1>
+        <div className="text-sm text-[#6B7280]">{currentDate}</div>
+      </div>
 
-      {/* Quick access to Instructor Hub */}
-      <Card className="border bg-muted/40">
-        <CardContent className="py-3 flex items-center justify-between">
-          <span className="text-sm">New: Manage instructors, payroll and coverage in the Instructor Hub.</span>
-          <a href="/instructor-hub" className="story-link text-primary">Open Instructor Hub</a>
-        </CardContent>
-      </Card>
+      <div className="flex gap-6 p-6">
+        {/* Main Content */}
+        <div className="flex-1 space-y-6">
+          {/* Subtitle */}
+          <p className="text-[#6B7280]">Here's what's happening in your studio today.</p>
 
-      <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        <KPITrendCard title="Active Customers" value={metrics ? String(metrics.active_customers ?? "—") : "—"} trend={trends.customers} actionLabel="View Churned Customers" onAction={() => (window.location.href = "/customers")} />
-        <KPITrendCard title="Class Occupancy" value={formatPct(metrics?.class_occupancy_pct)} trend={trends.occupancy} actionLabel="Promote Underfilled Classes" onAction={() => (window.location.href = "/leads")} />
-        <KPITrendCard title="Revenue" value={formatCurrency(metrics?.revenue_this_month)} change={formatChange(metrics?.revenue_change_pct)} trend={trends.revenue} actionLabel="Send Offer" onAction={() => (window.location.href = "/marketing")} />
-        <KPITrendCard title="Retention Rate" value={formatPct(metrics?.retention_rate_pct)} trend={trends.retention} actionLabel="Nurture Drop‑offs" onAction={() => (window.location.href = "/segments")} />
-      </section>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="bg-white border border-[#E5E7EB] shadow-sm">
+              <CardContent className="p-4">
+                <div className="text-sm text-[#6B7280] mb-1">Active Students</div>
+                <div className="text-2xl font-semibold text-[#1F2937]">{metrics ? String(metrics.active_customers ?? "—") : "—"}</div>
+                <div className="text-xs text-[#10B981] mt-1">+3 this month</div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white border border-[#E5E7EB] shadow-sm">
+              <CardContent className="p-4">
+                <div className="text-sm text-[#6B7280] mb-1">Class Occupancy</div>
+                <div className="text-2xl font-semibold text-[#1F2937]">{formatPct(metrics?.class_occupancy_pct)}</div>
+                <div className="text-xs text-[#10B981] mt-1">last this week</div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white border border-[#E5E7EB] shadow-sm">
+              <CardContent className="p-4">
+                <div className="text-sm text-[#6B7280] mb-1">Revenue</div>
+                <div className="text-2xl font-semibold text-[#1F2937]">{formatCurrency(metrics?.revenue_this_month)}</div>
+                <div className="text-xs text-[#10B981] mt-1 flex items-center">
+                  <span>↗</span>
+                  <span className="ml-1">{formatChange(metrics?.revenue_change_pct) || "+0%"}</span>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white border border-[#E5E7EB] shadow-sm">
+              <CardContent className="p-4">
+                <div className="text-sm text-[#6B7280] mb-1">Retention Rate</div>
+                <div className="text-2xl font-semibold text-[#1F2937]">{formatPct(metrics?.retention_rate_pct)}</div>
+                <div className="text-xs text-[#10B981] mt-1 flex items-center">
+                  <span>↗</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Executive KPIs */}
-      <section aria-labelledby="exec-kpis-heading" className="space-y-4">
-        <h2 id="exec-kpis-heading" className="text-xl font-semibold">Executive KPIs</h2>
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-6">
-          <StatCard title="MRR Estimate" value={formatCurrency(metrics?.executive_kpis?.mrr_estimate as any)} subtitle="$150 per active client" />
-          <StatCard title="Weekly Growth" value={formatChange(metrics?.executive_kpis?.weekly_growth_rate as any) ?? "—"} subtitle="New signups vs last week" />
-          <StatCard title="Churn Risk (30d)" value={String(metrics?.executive_kpis?.churn_risk_about_to_churn ?? '—')} subtitle="At 30–37 day mark" />
-          <StatCard title="Legal Exposure" value={String(metrics?.executive_kpis?.legal_exposure_active_no_waiver ?? '—')} subtitle="Active 7d w/o waiver" />
-          <StatCard title="Data Completeness" value={formatPct(metrics?.executive_kpis?.data_completeness_score as any)} subtitle="Phone, Birthday, Opt-ins" />
-          <StatCard title="LTV/CAC" value={formatRatioX(metrics?.executive_kpis?.ltv_cac_ratio as any)} subtitle="Target ≥ 3.0x" />
+          {/* Ask Talo Anything */}
+          <Card className="bg-[#2C4A42] text-white shadow-lg">
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-medium">Ask Talo anything</h2>
+                  <p className="text-sm text-white/80 mt-1">Get insights on attendance, instructor performance, or anything else.</p>
+                </div>
+                
+                <div className="bg-white/10 rounded-lg p-4">
+                  <p className="text-sm text-white/90 mb-3">Sure, our retention rate currently stands at 84%.</p>
+                  <p className="text-sm text-white/80">You can see the figure displayed in the widget above.</p>
+                </div>
+                
+                <div className="border-t border-white/20 pt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-white/80">What is our retention rate?</span>
+                    <ChevronRight className="h-4 w-4 text-white/60" />
+                  </div>
+                  <div className="mt-2">
+                    <input 
+                      type="text" 
+                      placeholder="Ask Talo anything..." 
+                      className="w-full bg-transparent border-none text-white placeholder-white/60 text-sm focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </section>
 
-      <section>
-        <StudioCalendar />
-      </section>
-
-      {/* Dynamic insights based on real data */}
-      {metrics?.revenue_change_pct && metrics.revenue_change_pct > 0 && (
-        <Card className="border-dashed">
-          <CardContent className="py-3 text-sm flex items-center justify-between">
-            <span className="text-muted-foreground">
-              Revenue is up {Math.round(metrics.revenue_change_pct * 100)}% from last month! Keep momentum going.
-            </span>
-            <a href="/marketing" className="story-link text-primary">Open Marketing Hub</a>
-          </CardContent>
-        </Card>
-      )}
-      {metrics?.executive_kpis?.churn_risk_about_to_churn && metrics.executive_kpis.churn_risk_about_to_churn > 0 && (
-        <Card className="border-dashed border-orange-200">
-          <CardContent className="py-3 text-sm flex items-center justify-between">
-            <span className="text-muted-foreground">
-              {metrics.executive_kpis.churn_risk_about_to_churn} customers haven't been seen in 30+ days. Consider reaching out.
-            </span>
-            <a href="/customers" className="story-link text-primary">View Customers</a>
-          </CardContent>
-        </Card>
-      )}
+        {/* Right Sidebar */}
+        <div className="w-80 space-y-6">
+          {/* Upcoming Classes */}
+          <Card className="bg-white border border-[#E5E7EB] shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium text-[#1F2937]">Upcoming Classes</h3>
+                <div className="flex items-center text-sm text-[#6B7280]">
+                  August 2025
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </div>
+              </div>
+              
+              {/* Mini Calendar */}
+              <div className="mb-4">
+                <div className="grid grid-cols-7 gap-1 text-xs text-center text-[#6B7280] mb-2">
+                  <div>Su</div>
+                  <div>Mo</div>
+                  <div>Tu</div>
+                  <div>We</div>
+                  <div>Th</div>
+                  <div>Fr</div>
+                  <div>Sa</div>
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {Array.from({ length: 31 }, (_, i) => (
+                    <div key={i + 1} className={`text-xs p-1 text-center ${i + 1 === 9 ? 'bg-[#10B981] text-white rounded' : 'text-[#1F2937]'}`}>
+                      {i + 1}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <h4 className="font-medium text-[#1F2937] text-sm">Upcoming Classes</h4>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-[#1F2937]">Vinyasa</div>
+                      <div className="text-xs text-[#6B7280]">9:00 AM</div>
+                    </div>
+                    <div className="text-xs text-[#6B7280]">Alice</div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-[#1F2937]">Restorative</div>
+                      <div className="text-xs text-[#6B7280]">7:30 PM</div>
+                    </div>
+                    <div className="text-xs text-[#6B7280]">Ethel Chen</div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-[#1F2937]">Hatha</div>
+                      <div className="text-xs text-[#6B7280]">3:00 AM</div>
+                    </div>
+                    <div className="text-xs text-[#6B7280]">Sam Bo</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
