@@ -1,22 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Progress } from "@/components/ui/progress";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Mail, MessageCircle, Calendar, Star, Phone, ChevronRight, AlertTriangle, Send, Users, Tag, Edit3 } from "lucide-react";
-import CustomerAIChat from "@/components/chat/CustomerAIChat";
 import { CustomerDetailSkeleton, ErrorState } from "@/components/ui/loading-skeletons";
 import { supabase } from "@/integrations/supabase/client";
-import CustomerNotes from "@/components/customers/CustomerNotes";
 import SendMessageDialog from "@/components/customers/SendMessageDialog";
+import CustomerProfileHeader from "@/components/customer-profile/CustomerProfileHeader";
+import ContextLibrary from "@/components/customer-profile/ContextLibrary";
+import FredAssistant from "@/components/customer-profile/FredAssistant";
 
 // Mock data until real data is wired
 const MOCK = {
@@ -26,7 +16,7 @@ const MOCK = {
   email: "emily.carter@example.com",
   phone: "+1 555-0123",
   avatar_url: "https://i.pravatar.cc/128?u=emily.carter@example.com",
-  status: "intro", // prospect | drop-in | member
+  status: "intro",
   current_day: 14,
   total_days: 30,
   engagement: "high" as "high" | "medium" | "low",
@@ -81,12 +71,12 @@ const MOCK = {
 function useCustomerData(id?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [customer, setCustomer] = useState<any>(null);
+  const [customer, setCustomer] = useState<any>(MOCK);
   
   useEffect(() => {
     const fetchCustomer = async () => {
       if (!id) {
-        setError('Customer ID is required');
+        setCustomer(MOCK);
         setLoading(false);
         return;
       }
@@ -97,83 +87,34 @@ function useCustomerData(id?: string) {
         
         const { data, error } = await supabase
           .from('customers')
-          .select(`
-            *,
-            bookings (
-              id,
-              booking_date,
-              booking_status,
-              classes_schedule (
-                class_name,
-                instructor_name
-              )
-            )
-          `)
+          .select('*')
           .eq('id', parseInt(id))
           .single();
         
         if (error) throw error;
         
-        // Transform the data to match expected format
         const transformedCustomer = {
+          ...MOCK,
           id: data.id,
           first_name: data.first_name,
           last_name: data.last_name,
           email: data.client_email,
           phone: data.phone_number,
-          avatar_url: undefined,
           status: data.status === 'intro_trial' ? 'intro' : 
                   data.status === 'active' ? 'member' :
                   data.status === 'drop_in' ? 'drop-in' : 'prospect',
           current_day: data.intro_start_date 
             ? Math.floor((Date.now() - new Date(data.intro_start_date).getTime()) / (1000 * 60 * 60 * 24))
             : 0,
-          total_days: 30,
-          engagement: 'medium' as const,
-          total_classes: data.bookings?.filter((b: any) => b.booking_status === 'confirmed')?.length || 0,
           total_lifetime_value: data.total_lifetime_value || 0,
-          member_since: data.created_at,
           last_seen: data.last_seen,
           notes: data.notes || '',
-          first_class_date: data.first_class_date,
-          preferred_instructor: '',
-          source: data.source || 'Unknown',
-          home_studio: 'Talo Yoga',
-          emergency_contact: '',
-          injuries: 'None listed',
-          birthday: data.birthday,
-          journey: {
-            classes_this_month: 0,
-            next_class: null,
-            conversion_score: 75,
-          },
-          communications: [],
-          classes: (data.bookings || []).map((booking: any) => ({
-            id: booking.id,
-            date: booking.booking_date,
-            title: booking.classes_schedule?.class_name || 'Unknown Class',
-            instructor: booking.classes_schedule?.instructor_name || 'Unknown',
-            status: booking.booking_status === 'confirmed' ? 'attended' : 
-                    booking.booking_status === 'cancelled' ? 'cancelled' : 'no‑show'
-          })),
-          membership: {
-            package: data.status === 'intro_trial' ? 'Intro Offer' : 'Member',
-            expires: data.intro_end_date,
-            purchases: [],
-            upgrade_suggestions: ['Monthly Unlimited', '10‑Class Pack'],
-            classes_remaining: { used: 0, total: 5 },
-          },
-          engagement_metrics: {
-            classes_per_week: 1.5,
-            response_rate: 50,
-            referrals: 0,
-            tags: data.tags ? data.tags.split(',').map((t: string) => t.trim()) : [],
-          },
         };
         
         setCustomer(transformedCustomer);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load customer');
+        console.error('Failed to load customer:', err);
+        setCustomer(MOCK);
       } finally {
         setLoading(false);
       }
@@ -183,37 +124,6 @@ function useCustomerData(id?: string) {
   }, [id]);
   
   return { customer, loading, error };
-}
-
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(n);
-}
-
-function timeSince(iso?: string) {
-  if (!iso) return "-";
-  const diff = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (days <= 0) return "today";
-  if (days === 1) return "1 day ago";
-  return `${days} days ago`;
-}
-
-function formatDateShort(iso?: string) {
-  if (!iso) return "-";
-  const d = new Date(iso);
-  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-
-function EngagementDots({ level }: { level: "high" | "medium" | "low" }) {
-  const active = level === "high" ? 3 : level === "medium" ? 2 : 1;
-  const color = (i: number) => (i <= active ? (level === "low" ? "bg-destructive" : level === "medium" ? "bg-secondary" : "bg-primary") : "bg-muted");
-  return (
-    <div className="flex items-center gap-1" aria-label={`Engagement ${level}`}>
-      {[1, 2, 3].map((i) => (
-        <span key={i} className={`h-2.5 w-2.5 rounded-full ${color(i)}`} />
-      ))}
-    </div>
-  );
 }
 
 export default function CustomerDetail() {
@@ -232,467 +142,49 @@ export default function CustomerDetail() {
   }
 
   const fullName = `${customer.first_name} ${customer.last_name}`;
+  const daysSinceLastVisit = customer.last_seen 
+    ? Math.floor((Date.now() - new Date(customer.last_seen).getTime()) / (1000 * 60 * 60 * 24))
+    : undefined;
 
-  const daysRemaining = useMemo(() => {
-    const exp = customer.membership?.expires ? new Date(customer.membership.expires).getTime() : 0;
-    return Math.max(0, Math.ceil((exp - Date.now()) / (1000 * 60 * 60 * 24)));
-  }, [customer.membership?.expires]);
-
-  const noShowCount = useMemo(() => customer.classes.filter((k) => k.status === "no‑show").length, [customer.classes]);
-  const cancelledCount = useMemo(() => customer.classes.filter((k) => k.status === "cancelled").length, [customer.classes]);
-  const favoriteTitle = useMemo(() => {
-    const freq: Record<string, number> = {};
-    customer.classes.filter((k) => k.status === "attended").forEach((k) => {
-      freq[k.title] = (freq[k.title] || 0) + 1;
-    });
-    return Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
-  }, [customer.classes]);
-  const favoriteTime = useMemo(() => {
-    const buckets = { Morning: 0, Afternoon: 0, Evening: 0 } as Record<string, number>;
-    customer.classes.filter((k) => k.status === "attended").forEach((k) => {
-      const h = new Date(k.date).getHours();
-      if (h < 12 && h >= 5) buckets.Morning++;
-      else if (h < 17) buckets.Afternoon++;
-      else buckets.Evening++;
-    });
-    return Object.entries(buckets).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
-  }, [customer.classes]);
-  const attendedCount = useMemo(() => customer.classes.filter((k) => k.status === "attended").length, [customer.classes]);
-  const bookedCount = useMemo(() => customer.classes.length, [customer.classes]);
-  const showRate = useMemo(() => (bookedCount ? Math.round((attendedCount / bookedCount) * 100) : 0), [attendedCount, bookedCount]);
-  const lastAttended = useMemo(() => {
-    return customer.classes
-      .filter((k) => k.status === "attended")
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] || null;
-  }, [customer.classes]);
-
-  // SEO: title, meta description, canonical, JSON‑LD (Person)
+  // SEO
   useEffect(() => {
-    document.title = `${fullName} – Customer Detail | Talo Yoga`;
-
-    const desc = `Customer detail for ${fullName}: journey stage, engagement, classes, and communications.`;
-    let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
-    if (!meta) {
-      meta = document.createElement("meta");
-      meta.name = "description";
-      document.head.appendChild(meta);
-    }
-    meta.content = desc;
-
-    const canonicalHref = `${window.location.origin}/customer/${id ?? customer.id}`;
-    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
-    if (!canonical) {
-      canonical = document.createElement("link");
-      canonical.rel = "canonical";
-      document.head.appendChild(canonical);
-    }
-    canonical.href = canonicalHref;
-
-    const ld = {
-      '@context': 'https://schema.org',
-      '@type': 'Person',
-      name: fullName,
-      email: customer.email,
-      telephone: customer.phone,
-      memberOf: { '@type': 'Organization', name: 'Talo Yoga' },
-    } as const;
-    let script = document.getElementById("ld-person") as HTMLScriptElement | null;
-    if (!script) {
-      script = document.createElement("script");
-      script.type = "application/ld+json";
-      script.id = "ld-person";
-      document.head.appendChild(script);
-    }
-    script.text = JSON.stringify(ld);
-
-    return () => {
-      // optional cleanup not strictly necessary in SPA
-    };
-  }, [fullName, id, customer.email, customer.phone, customer.id]);
-
-  const journeyBadge = useMemo(() => {
-    const stage = customer.status;
-    if (stage === "intro") {
-      const d = customer.current_day;
-      return <Badge className="bg-primary-foreground/15 text-primary-foreground border border-primary-foreground/20">Intro Day {d} of {customer.total_days}</Badge>;
-    }
-    if (stage === "member") return <Badge className="bg-primary-foreground/15 text-primary-foreground border border-primary-foreground/20">Active Member</Badge>;
-    if (stage === "drop-in") return <Badge className="bg-primary-foreground/15 text-primary-foreground border border-primary-foreground/20">Drop‑in</Badge>;
-    return <Badge className="bg-primary-foreground/15 text-primary-foreground border border-primary-foreground/20">Prospect</Badge>;
-  }, [customer]);
-
-  const onSendMessage = () => {
-    toast({ title: "Message sent", description: `Queued message to ${fullName}.` });
-  };
-  const onAddNote = () => {
-    toast({ title: "Note saved", description: "Your note has been added." });
-  };
+    document.title = `${fullName} – Customer Profile | Talo Yoga`;
+  }, [fullName]);
 
   return (
-    <TooltipProvider>
-      <div className="space-y-6">
-        {/* Header */}
-        {/* Dark Header Section */}
-        <div className="bg-slate-900 text-white rounded-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <Link to="/customers">
-              <Button variant="secondary" className="bg-yellow-400 text-slate-900 hover:bg-yellow-300">
-                <ArrowLeft className="mr-2 w-4 h-4" /> Back to all customers
-              </Button>
-            </Link>
-            <Button className="bg-yellow-400 text-slate-900 hover:bg-yellow-300">
-              View Resources
-            </Button>
-          </div>
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      {/* Customer Profile Header */}
+      <CustomerProfileHeader customer={customer} />
 
-          <div className="flex items-start gap-6">
-            <Avatar className="h-20 w-20 ring-2 ring-green-500">
-              <AvatarImage src={customer.avatar_url} alt={`${fullName} avatar`} />
-              <AvatarFallback className="bg-slate-700 text-white text-xl">
-                {customer.first_name[0]}{customer.last_name[0]}
-              </AvatarFallback>
-            </Avatar>
-            
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold">{fullName}</h1>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-green-400">On Track</span>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-8 mt-4">
-                <div>
-                  <div className="text-sm text-slate-400">Stage</div>
-                  <div className="bg-blue-600 text-blue-100 px-3 py-1 rounded-full text-sm font-medium inline-block mt-1">
-                    {customer.status === 'intro' ? 'Intro Offer' : customer.status === 'member' ? 'Active Member' : 'Prospect'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-slate-400">LTV</div>
-                  <div className="text-2xl font-bold text-white mt-1">
-                    {formatCurrency(customer.total_lifetime_value || 0)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-slate-400">Last Contact</div>
-                  <div className="text-white mt-1">{timeSince(customer.last_seen)}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-6 pt-6 border-t border-slate-700">
-            <div className="text-sm text-slate-400 mb-2">Bio</div>
-            <div className="text-white">
-              {customer.notes || `Yoga student at Talo Yoga. ${customer.status === 'intro' ? 'Currently in intro offer period.' : 'Active member of our community.'}`}
-            </div>
-          </div>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Context Library - Left Side */}
+        <div className="lg:col-span-2">
+          <ContextLibrary customer={customer} />
         </div>
 
-        {daysRemaining <= 3 && (
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Intro offer expiring in {daysRemaining} days</AlertTitle>
-            <AlertDescription>Send a conversion offer to encourage membership.</AlertDescription>
-          </Alert>
-        )}
-
-        {customer.classes.length === 0 && (
-          <Alert>
-            <AlertTitle>No classes attended yet</AlertTitle>
-            <AlertDescription>Send a welcome message to help them get started.</AlertDescription>
-          </Alert>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          <div className="lg:col-span-2">
-            {/* AI Chat Interface */}
-            <Card className="mb-6">
-              <CardHeader className="flex flex-row items-center gap-3 pb-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center">
-                  <span className="text-white font-semibold text-sm">AI</span>
-                </div>
-                <div>
-                  <CardTitle className="text-lg">{fullName}'s AI Assistant</CardTitle>
-                  <CardDescription>
-                    Get insights about {customer.first_name}'s journey and engagement patterns
-                  </CardDescription>
-                </div>
-                <Button size="sm" variant="outline" className="ml-auto">
-                  Load Demo
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <CustomerAIChat customer={customer} />
-              </CardContent>
-            </Card>
-            
-            <Tabs defaultValue="classes" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="classes">Classes</TabsTrigger>
-                <TabsTrigger value="timeline">Communications</TabsTrigger>
-                <TabsTrigger value="purchases">Purchases</TabsTrigger>
-                <TabsTrigger value="details">Details</TabsTrigger>
-              </TabsList>
-
-
-              <TabsContent value="timeline">
-                <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-                  <CardHeader>
-                    <CardTitle>Communication Log</CardTitle>
-                    <CardDescription>Most recent first</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {customer.communications.length === 0 && (
-                        <div className="text-sm text-muted-foreground">No communications yet – consider sending a welcome message.</div>
-                      )}
-                      {customer.communications.map((c) => (
-                        <div key={c.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
-                          <div className="flex items-center gap-3">
-                            {c.type === "email" ? <Mail /> : <MessageCircle />}
-                            <div>
-                              <div className="font-medium">{c.subject}</div>
-                              <div className="text-xs text-muted-foreground">{formatDateShort(c.at)}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={c.status === "replied" ? "secondary" : c.status === "opened" ? "default" : "outline"}>{c.status}</Badge>
-                            {c.status === "scheduled" && (
-                              <Button size="sm" variant="outline" onClick={() => toast({ title: "Message scheduled", description: "This message will send automatically." })}>
-                                View <ChevronRight className="ml-1" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="classes">
-                <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-                  <CardHeader>
-                    <CardTitle>Class History</CardTitle>
-                    <CardDescription>Recent activity</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {customer.classes.length === 0 ? (
-                      <div className="text-sm text-muted-foreground">No classes attended yet – Send welcome message.</div>
-                    ) : (
-                      <div className="w-full overflow-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Class</TableHead>
-                              <TableHead>Instructor</TableHead>
-                              <TableHead className="text-right">Status</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {customer.classes.map((k) => (
-                              <TableRow key={k.id}>
-                                <TableCell>{formatDateShort(k.date)}</TableCell>
-                                <TableCell>{k.title}</TableCell>
-                                <TableCell>{k.instructor}</TableCell>
-                                <TableCell className="text-right">
-                                  <Badge variant={k.status === "attended" ? "secondary" : k.status === "cancelled" ? "outline" : "destructive"}>{k.status}</Badge>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <Tile title="Favorites" subtitle={`${favoriteTitle} • ${favoriteTime}`} />
-                      <Tile title="No‑shows" subtitle={`${noShowCount}`} />
-                      <Tile title="Cancellations" subtitle={`${cancelledCount}`} />
-                    </div>
-                    <div className="mt-3">
-                      <Button variant="link">View Full History</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="purchases">
-                <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-                  <CardHeader>
-                    <CardTitle>Purchases</CardTitle>
-                    <CardDescription>History & upgrades</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-1 text-sm">
-                      {customer.membership.purchases.map((p) => (
-                        <div key={p.id} className="flex items-center justify-between">
-                          <span>{p.item}</span>
-                          <span className="text-muted-foreground">{formatDateShort(p.date)} • {formatCurrency(p.price)}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="pt-2">
-                      <div className="text-sm font-medium mb-1">Upgrade opportunities</div>
-                      <div className="flex flex-wrap gap-2">
-                        {customer.membership.upgrade_suggestions.map((u) => (
-                          <Badge key={u} variant="outline">{u === "10‑Class Pack" ? "Monthly Unlimited" : u}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="details">
-                <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-                  <CardHeader>
-                    <CardTitle>Profile & Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                      <Metric label="Total Classes" value={String(customer.total_classes)} />
-                      <Metric label="Total Spent" value={formatCurrency(customer.total_lifetime_value)} />
-                      <Metric label="Member Since" value={formatDateShort(customer.member_since)} />
-                      <Metric label="Last Visit" value={timeSince(customer.last_seen)} />
-                      <Metric label="Email" value={customer.email} />
-                      <Metric label="Phone" value={customer.phone} />
-                    </div>
-                    {customer.notes && (
-                      <CardDescription className="pt-1">
-                        <span className="font-medium">Notes:</span> {customer.notes}
-                      </CardDescription>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Sidebar */}
-          <aside className="space-y-6 lg:sticky lg:top-20">
-            <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button 
-                  className="w-full" 
-                  onClick={() => setShowMessageDialog(true)}
-                  aria-label="Send message to customer"
-                >
-                  <Send className="mr-2" /> Send Message
-                </Button>
-                <Button variant="outline" className="w-full" aria-label="Add to Prenatal Community" onClick={() => toast({ title: "Added to Prenatal Community", description: `${fullName} tagged & added.` })}>
-                  <Users className="mr-2" /> Add to Prenatal Community
-                </Button>
-                <Button variant="outline" className="w-full" aria-label="Log Manual Outreach" onClick={() => toast({ title: "Outreach logged", description: "Manual outreach recorded (mock)." })}>
-                  <Edit3 className="mr-2" /> Log Manual Outreach
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none bg-[--card] shadow-[var(--shadow-elegant)]">
-              <CardHeader>
-                <CardTitle>Membership</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-muted-foreground">Current Status</div>
-                  <div className="text-right">{customer.membership.package}</div>
-
-                  <div className="text-muted-foreground">Expiration</div>
-                  <div className={`text-right ${daysRemaining <= 3 ? "text-destructive font-medium" : ""}`}>{formatDateShort(customer.membership.expires)}</div>
-
-                  <div className="text-muted-foreground">Classes Remaining</div>
-                  <div className="text-right">
-                    {customer.membership.classes_remaining
-                      ? `${Math.max(0, customer.membership.classes_remaining.total - customer.membership.classes_remaining.used)} of ${customer.membership.classes_remaining.total}`
-                      : "—"}
-                  </div>
-
-                  <div className="text-muted-foreground">First Class Date</div>
-                  <div className="text-right">{formatDateShort(customer.first_class_date)}</div>
-
-                  <div className="text-muted-foreground">Preferred Instructor</div>
-                  <div className="text-right">{customer.preferred_instructor || "—"}</div>
-
-                  <div className="text-muted-foreground">Source</div>
-                  <div className="text-right">{customer.source || "—"}</div>
-
-                  <div className="text-muted-foreground">Home Studio</div>
-                  <div className="text-right">{customer.home_studio || "—"}</div>
-
-                  <div className="text-muted-foreground">Emergency Contact</div>
-                  <div className="text-right">{customer.emergency_contact || "—"}</div>
-
-                  <div className="text-muted-foreground">Injuries/Modifications</div>
-                  <div className="text-right">{customer.injuries || "—"}</div>
-
-                  <div className="text-muted-foreground">Birthday</div>
-                  <div className="text-right">{formatDateShort(customer.birthday)}</div>
-                </div>
-                <div className="pt-2">
-                  <div className="text-sm font-medium mb-1">Purchase history</div>
-                  <div className="space-y-1 text-sm">
-                    {customer.membership.purchases.map((p) => (
-                      <div key={p.id} className="flex items-center justify-between">
-                        <span>{p.item}</span>
-                        <span className="text-muted-foreground">{formatDateShort(p.date)} • {formatCurrency(p.price)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="pt-2">
-                  <div className="text-sm font-medium mb-1">Upgrade opportunities</div>
-                  <div className="flex flex-wrap gap-2">
-                    {customer.membership.upgrade_suggestions.map((u) => (
-                      <Badge key={u} variant="outline">{u === "10‑Class Pack" ? "Monthly Unlimited" : u}</Badge>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <CustomerNotes customerId={customer.id} />
-          </aside>
+        {/* Fred AI Assistant - Right Side */}
+        <div className="lg:col-span-1">
+          <FredAssistant 
+            customer={{
+              ...customer,
+              daysSinceLastVisit
+            }} 
+          />
         </div>
-
-        <SendMessageDialog
-          open={showMessageDialog}
-          onOpenChange={setShowMessageDialog}
-          customer={{
-            id: customer.id,
-            name: fullName,
-            email: customer.email,
-            phone: customer.phone
-          }}
-        />
       </div>
-    </TooltipProvider>
-  );
-}
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border p-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-sm font-medium">{value}</div>
-    </div>
-  );
-}
-
-function Tile({ title, subtitle, icon }: { title: string; subtitle: string; icon?: React.ReactNode }) {
-  return (
-    <div className="rounded-md border p-3 flex items-start gap-3">
-      {icon && <div className="mt-0.5">{icon}</div>}
-      <div>
-        <div className="text-xs text-muted-foreground">{title}</div>
-        <div className="text-sm font-medium">{subtitle}</div>
-      </div>
+      {/* Message Dialog */}
+      <SendMessageDialog
+        open={showMessageDialog}
+        onOpenChange={setShowMessageDialog}
+        customers={[{
+          id: customer.id.toString(),
+          name: fullName,
+          email: customer.email,
+          phone: customer.phone
+        }]}
+      />
     </div>
   );
 }
