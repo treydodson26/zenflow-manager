@@ -387,7 +387,17 @@ export default function Students() {
         <SendMessageDialog
           open={showMessageDialog}
           onOpenChange={setShowMessageDialog}
-          customers={selectedStudents.map(s => ({ id: s.id, name: s.name, email: s.email, phone: s.phone }))}
+          customer={selectedStudents.length > 0 ? {
+            id: parseInt(selectedStudents[0].id),
+            name: selectedStudents[0].name,
+            email: selectedStudents[0].email,
+            phone: selectedStudents[0].phone
+          } : {
+            id: 0,
+            name: "",
+            email: "",
+            phone: ""
+          }}
         />
       </main>
     </div>

@@ -178,12 +178,12 @@ export default function CustomerDetail() {
       <SendMessageDialog
         open={showMessageDialog}
         onOpenChange={setShowMessageDialog}
-        customers={[{
-          id: customer.id.toString(),
+        customer={{
+          id: customer.id,
           name: fullName,
           email: customer.email,
           phone: customer.phone
-        }]}
+        }}
       />
     </div>
   );

@@ -10,6 +10,7 @@ interface FredAssistantProps {
     id: number;
     first_name: string;
     last_name: string;
+    email?: string;
     status: string;
     current_day: number;
     total_classes: number;
@@ -210,8 +211,12 @@ export default function FredAssistant({ customer }: FredAssistantProps) {
           </CardHeader>
           <CardContent>
             <CustomerAIChat 
-              customerId={customer.id}
-              customerName={`${customer.first_name} ${customer.last_name}`}
+              customer={{
+                id: customer.id,
+                first_name: customer.first_name,
+                last_name: customer.last_name,
+                email: customer.email
+              }}
             />
           </CardContent>
         </Card>
