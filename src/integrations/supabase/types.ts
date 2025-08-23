@@ -296,62 +296,116 @@ export type Database = {
         Row: {
           address: string | null
           agree_to_liability_waiver: boolean | null
+          appointments_attended: number | null
+          appointments_booked: number | null
+          appointments_canceled: number | null
           birthday: string | null
           client_email: string
+          client_id: string | null
           client_name: string | null
           created_at: string | null
+          days_since_registration: number | null
           first_name: string
           first_seen: string
+          group_classes_attended: number | null
+          group_classes_booked: number | null
+          group_classes_canceled: number | null
+          has_attendance_data: boolean | null
           id: string
+          intro_day: number | null
+          is_intro_offer: boolean | null
           last_name: string | null
+          last_pricing_option_used: string | null
           last_seen: string | null
+          last_visit_date: string | null
           marketing_email_opt_in: boolean | null
           marketing_text_opt_in: boolean | null
-          phone_number: string | null
+          phone: string | null
+          pipeline_segment: string | null
           pre_arketa_milestone_count: number | null
+          pricing_option_id: string | null
           tags: Json | null
+          total_classes_attended: number | null
+          total_classes_booked: number | null
           transactional_text_opt_in: boolean | null
           updated_at: string | null
+          video_classes: number | null
         }
         Insert: {
           address?: string | null
           agree_to_liability_waiver?: boolean | null
+          appointments_attended?: number | null
+          appointments_booked?: number | null
+          appointments_canceled?: number | null
           birthday?: string | null
           client_email: string
+          client_id?: string | null
           client_name?: string | null
           created_at?: string | null
+          days_since_registration?: number | null
           first_name: string
           first_seen: string
+          group_classes_attended?: number | null
+          group_classes_booked?: number | null
+          group_classes_canceled?: number | null
+          has_attendance_data?: boolean | null
           id?: string
+          intro_day?: number | null
+          is_intro_offer?: boolean | null
           last_name?: string | null
+          last_pricing_option_used?: string | null
           last_seen?: string | null
+          last_visit_date?: string | null
           marketing_email_opt_in?: boolean | null
           marketing_text_opt_in?: boolean | null
-          phone_number?: string | null
+          phone?: string | null
+          pipeline_segment?: string | null
           pre_arketa_milestone_count?: number | null
+          pricing_option_id?: string | null
           tags?: Json | null
+          total_classes_attended?: number | null
+          total_classes_booked?: number | null
           transactional_text_opt_in?: boolean | null
           updated_at?: string | null
+          video_classes?: number | null
         }
         Update: {
           address?: string | null
           agree_to_liability_waiver?: boolean | null
+          appointments_attended?: number | null
+          appointments_booked?: number | null
+          appointments_canceled?: number | null
           birthday?: string | null
           client_email?: string
+          client_id?: string | null
           client_name?: string | null
           created_at?: string | null
+          days_since_registration?: number | null
           first_name?: string
           first_seen?: string
+          group_classes_attended?: number | null
+          group_classes_booked?: number | null
+          group_classes_canceled?: number | null
+          has_attendance_data?: boolean | null
           id?: string
+          intro_day?: number | null
+          is_intro_offer?: boolean | null
           last_name?: string | null
+          last_pricing_option_used?: string | null
           last_seen?: string | null
+          last_visit_date?: string | null
           marketing_email_opt_in?: boolean | null
           marketing_text_opt_in?: boolean | null
-          phone_number?: string | null
+          phone?: string | null
+          pipeline_segment?: string | null
           pre_arketa_milestone_count?: number | null
+          pricing_option_id?: string | null
           tags?: Json | null
+          total_classes_attended?: number | null
+          total_classes_booked?: number | null
           transactional_text_opt_in?: boolean | null
           updated_at?: string | null
+          video_classes?: number | null
         }
         Relationships: []
       }
@@ -494,46 +548,73 @@ export type Database = {
       }
       csv_imports: {
         Row: {
+          attendance_filename: string | null
+          client_list_filename: string | null
           completed_at: string | null
           created_at: string | null
+          details: Json | null
           error_details: Json | null
+          error_message: string | null
           failed_records: number | null
-          filename: string
-          id: number
-          new_records: number
+          filename: string | null
+          fresh_leads: number | null
+          id: string
+          import_date: string | null
+          intro_offer_members: number | null
+          new_records: number | null
+          processed_clients: number
           processing_time_ms: number | null
-          started_at: string | null
           status: string | null
-          total_records: number
-          updated_records: number
+          success: boolean | null
+          total_records: number | null
+          trial_users: number | null
+          updated_records: number | null
         }
         Insert: {
+          attendance_filename?: string | null
+          client_list_filename?: string | null
           completed_at?: string | null
           created_at?: string | null
+          details?: Json | null
           error_details?: Json | null
+          error_message?: string | null
           failed_records?: number | null
-          filename: string
-          id?: number
-          new_records: number
+          filename?: string | null
+          fresh_leads?: number | null
+          id?: string
+          import_date?: string | null
+          intro_offer_members?: number | null
+          new_records?: number | null
+          processed_clients: number
           processing_time_ms?: number | null
-          started_at?: string | null
           status?: string | null
-          total_records: number
-          updated_records: number
+          success?: boolean | null
+          total_records?: number | null
+          trial_users?: number | null
+          updated_records?: number | null
         }
         Update: {
+          attendance_filename?: string | null
+          client_list_filename?: string | null
           completed_at?: string | null
           created_at?: string | null
+          details?: Json | null
           error_details?: Json | null
+          error_message?: string | null
           failed_records?: number | null
-          filename?: string
-          id?: number
-          new_records?: number
+          filename?: string | null
+          fresh_leads?: number | null
+          id?: string
+          import_date?: string | null
+          intro_offer_members?: number | null
+          new_records?: number | null
+          processed_clients?: number
           processing_time_ms?: number | null
-          started_at?: string | null
           status?: string | null
-          total_records?: number
-          updated_records?: number
+          success?: boolean | null
+          total_records?: number | null
+          trial_users?: number | null
+          updated_records?: number | null
         }
         Relationships: []
       }
@@ -1398,42 +1479,6 @@ export type Database = {
         }
         Relationships: []
       }
-      segment_analytics: {
-        Row: {
-          conversions: number
-          created_at: string
-          date: string
-          emails_clicked: number
-          emails_opened: number
-          emails_sent: number
-          id: string
-          segment_type: string
-          total_customers: number
-        }
-        Insert: {
-          conversions?: number
-          created_at?: string
-          date?: string
-          emails_clicked?: number
-          emails_opened?: number
-          emails_sent?: number
-          id?: string
-          segment_type: string
-          total_customers?: number
-        }
-        Update: {
-          conversions?: number
-          created_at?: string
-          date?: string
-          emails_clicked?: number
-          emails_opened?: number
-          emails_sent?: number
-          id?: string
-          segment_type?: string
-          total_customers?: number
-        }
-        Relationships: []
-      }
       substitute_requests: {
         Row: {
           class_id: string | null
@@ -1490,24 +1535,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      user_rate_limits: {
-        Row: {
-          request_count: number
-          user_id: string
-          window_start: string
-        }
-        Insert: {
-          request_count?: number
-          user_id: string
-          window_start?: string
-        }
-        Update: {
-          request_count?: number
-          user_id?: string
-          window_start?: string
-        }
-        Relationships: []
       }
     }
     Views: {
