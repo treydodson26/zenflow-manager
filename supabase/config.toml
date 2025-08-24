@@ -1,5 +1,11 @@
 project_id = "mvndgpmetndvjsmvhqqh"
 
+[functions.handle-inbound-whatsapp]
+verify_jwt = false
+
+[functions.handle-inbound-email] 
+verify_jwt = false
+
 [functions.ai-ask]
 verify_jwt = false
 
