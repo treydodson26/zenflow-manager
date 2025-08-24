@@ -304,6 +304,7 @@ export type Database = {
           client_id: string | null
           client_name: string | null
           created_at: string | null
+          days_since_last_visit: number | null
           days_since_registration: number | null
           first_name: string
           first_seen: string
@@ -311,6 +312,7 @@ export type Database = {
           group_classes_booked: number | null
           group_classes_canceled: number | null
           has_attendance_data: boolean | null
+          has_membership: boolean | null
           id: string
           intro_day: number | null
           is_intro_offer: boolean | null
@@ -322,6 +324,7 @@ export type Database = {
           marketing_text_opt_in: boolean | null
           phone: string | null
           pipeline_segment: string | null
+          pipeline_stage: string | null
           pre_arketa_milestone_count: number | null
           pricing_option_id: string | null
           tags: Json | null
@@ -342,6 +345,7 @@ export type Database = {
           client_id?: string | null
           client_name?: string | null
           created_at?: string | null
+          days_since_last_visit?: number | null
           days_since_registration?: number | null
           first_name: string
           first_seen: string
@@ -349,6 +353,7 @@ export type Database = {
           group_classes_booked?: number | null
           group_classes_canceled?: number | null
           has_attendance_data?: boolean | null
+          has_membership?: boolean | null
           id?: string
           intro_day?: number | null
           is_intro_offer?: boolean | null
@@ -360,6 +365,7 @@ export type Database = {
           marketing_text_opt_in?: boolean | null
           phone?: string | null
           pipeline_segment?: string | null
+          pipeline_stage?: string | null
           pre_arketa_milestone_count?: number | null
           pricing_option_id?: string | null
           tags?: Json | null
@@ -380,6 +386,7 @@ export type Database = {
           client_id?: string | null
           client_name?: string | null
           created_at?: string | null
+          days_since_last_visit?: number | null
           days_since_registration?: number | null
           first_name?: string
           first_seen?: string
@@ -387,6 +394,7 @@ export type Database = {
           group_classes_booked?: number | null
           group_classes_canceled?: number | null
           has_attendance_data?: boolean | null
+          has_membership?: boolean | null
           id?: string
           intro_day?: number | null
           is_intro_offer?: boolean | null
@@ -398,6 +406,7 @@ export type Database = {
           marketing_text_opt_in?: boolean | null
           phone?: string | null
           pipeline_segment?: string | null
+          pipeline_stage?: string | null
           pre_arketa_milestone_count?: number | null
           pricing_option_id?: string | null
           tags?: Json | null
@@ -551,6 +560,7 @@ export type Database = {
       }
       csv_imports: {
         Row: {
+          active_members_count: number | null
           attendance_filename: string | null
           client_list_filename: string | null
           completed_at: string | null
@@ -564,9 +574,13 @@ export type Database = {
           id: string
           import_date: string | null
           intro_offer_members: number | null
+          intro_offers_count: number | null
+          leads_count: number | null
+          new_journeys_count: number | null
           new_records: number | null
           processed_clients: number
           processing_time_ms: number | null
+          prospects_count: number | null
           status: string | null
           success: boolean | null
           total_records: number | null
@@ -574,6 +588,7 @@ export type Database = {
           updated_records: number | null
         }
         Insert: {
+          active_members_count?: number | null
           attendance_filename?: string | null
           client_list_filename?: string | null
           completed_at?: string | null
@@ -587,9 +602,13 @@ export type Database = {
           id?: string
           import_date?: string | null
           intro_offer_members?: number | null
+          intro_offers_count?: number | null
+          leads_count?: number | null
+          new_journeys_count?: number | null
           new_records?: number | null
           processed_clients: number
           processing_time_ms?: number | null
+          prospects_count?: number | null
           status?: string | null
           success?: boolean | null
           total_records?: number | null
@@ -597,6 +616,7 @@ export type Database = {
           updated_records?: number | null
         }
         Update: {
+          active_members_count?: number | null
           attendance_filename?: string | null
           client_list_filename?: string | null
           completed_at?: string | null
@@ -610,9 +630,13 @@ export type Database = {
           id?: string
           import_date?: string | null
           intro_offer_members?: number | null
+          intro_offers_count?: number | null
+          leads_count?: number | null
+          new_journeys_count?: number | null
           new_records?: number | null
           processed_clients?: number
           processing_time_ms?: number | null
+          prospects_count?: number | null
           status?: string | null
           success?: boolean | null
           total_records?: number | null
