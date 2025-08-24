@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CustomerGroupSection from "@/components/communication/CustomerGroupSection";
 import UnifiedInbox from "@/components/communication/UnifiedInbox";
+import EnhancedUnifiedInbox from "@/components/communication/EnhancedUnifiedInbox";
 import DirectMessage from "@/components/communication/DirectMessage";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, MessageSquare, Heart, Clock, TrendingUp, Send } from "lucide-react";
@@ -274,7 +275,7 @@ export default function CommunicationHub() {
         ))}
 
         <TabsContent value="inbox">
-          <UnifiedInbox />
+          <EnhancedUnifiedInbox />
         </TabsContent>
 
         <TabsContent value="direct">
