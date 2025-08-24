@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CustomerGroupSection from "@/components/communication/CustomerGroupSection";
 import UnifiedInbox from "@/components/communication/UnifiedInbox";
+import DirectMessage from "@/components/communication/DirectMessage";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, MessageSquare, Heart, Clock, TrendingUp } from "lucide-react";
+import { Users, MessageSquare, Heart, Clock, TrendingUp, Send } from "lucide-react";
 
 interface Customer {
   id: string;  // Changed to string to match Supabase clients table
@@ -229,7 +230,7 @@ export default function CommunicationHub() {
       </header>
 
       <Tabs defaultValue="intro" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="intro" className="flex items-center gap-2">
             <Heart className="w-4 h-4" />
             Intro Offer
@@ -249,6 +250,10 @@ export default function CommunicationHub() {
           <TabsTrigger value="inbox" className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4" />
             Inbox
+          </TabsTrigger>
+          <TabsTrigger value="direct" className="flex items-center gap-2">
+            <Send className="w-4 h-4" />
+            Send Direct
           </TabsTrigger>
         </TabsList>
 
@@ -270,6 +275,12 @@ export default function CommunicationHub() {
 
         <TabsContent value="inbox">
           <UnifiedInbox />
+        </TabsContent>
+
+        <TabsContent value="direct">
+          <div className="flex justify-center pt-8">
+            <DirectMessage />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
