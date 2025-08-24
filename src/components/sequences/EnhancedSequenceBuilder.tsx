@@ -4,26 +4,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Plus, 
-  Trash2, 
-  Save, 
-  Play, 
   Mail, 
   MessageSquare, 
-  Phone, 
-  Clock,
-  Settings,
-  Eye,
-  Send,
-  Zap
+  Sparkles,
+  FileText,
+  Copy,
+  Rocket,
+  X,
+  ArrowLeft,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
+
+interface MessageSequence {
+  id?: number;
+  name: string;
+  description?: string;
+  active: boolean;
+  steps: MessageStep[];
+  totalSteps: number;
+  totalDays: number;
+}
 
 interface MessageStep {
   id?: number;
@@ -32,20 +39,32 @@ interface MessageStep {
   subject?: string;
   content: string;
   active: boolean;
-  delay_hours?: number;
 }
 
-interface SequenceBuilderProps {
-  onSequenceChange?: (sequences: MessageStep[]) => void;
+interface CompanyInfo {
+  name: string;
+  painPoints: string[];
+  valueProposition: string;
+  callToAction: string;
+  overview: string;
 }
 
-export default function EnhancedSequenceBuilder({ onSequenceChange }: SequenceBuilderProps) {
-  const [sequences, setSequences] = useState<MessageStep[]>([]);
-  const [editingId, setEditingId] = useState<number | null>(null);
+type CreationMode = 'selection' | 'ai-assisted' | 'templates' | 'clone' | 'from-scratch' | 'finalize';
+
+export default function EnhancedSequenceBuilder() {
+  const [sequences, setSequences] = useState<MessageSequence[]>([]);
   const [loading, setLoading] = useState(true);
-  const [previewingId, setPreviewingId] = useState<number | null>(null);
-  const [sequenceName, setSequenceName] = useState("Customer Nurture Sequence");
-  const [isCreatingTwilioSequence, setIsCreatingTwilioSequence] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [creationMode, setCreationMode] = useState<CreationMode>('selection');
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo>({
+    name: '',
+    painPoints: [''],
+    valueProposition: '',
+    callToAction: '',
+    overview: ''
+  });
+  const [currentSequence, setCurrentSequence] = useState<MessageSequence | null>(null);
+  const [expandedStep, setExpandedStep] = useState<number | null>(null);
 
   useEffect(() => {
     fetchSequences();
@@ -60,8 +79,20 @@ export default function EnhancedSequenceBuilder({ onSequenceChange }: SequenceBu
 
       if (error) throw error;
       
-      setSequences(data || []);
-      onSequenceChange?.(data || []);
+      // Group sequences by name (if we had sequence grouping)
+      const mockSequences: MessageSequence[] = [
+        {
+          id: 1,
+          name: "Intro Offer Sequence",
+          description: "New member welcome sequence",
+          active: true,
+          steps: data?.slice(0, 3) || [],
+          totalSteps: 3,
+          totalDays: 7
+        }
+      ];
+      
+      setSequences(mockSequences);
     } catch (error) {
       console.error('Error fetching sequences:', error);
       toast({
@@ -74,353 +105,468 @@ export default function EnhancedSequenceBuilder({ onSequenceChange }: SequenceBu
     }
   };
 
-  const addNewStep = () => {
-    const maxDay = sequences.length > 0 ? Math.max(...sequences.map(s => s.day)) : -1;
-    const newStep: MessageStep = {
-      day: maxDay + 1,
-      message_type: 'email',
-      subject: '',
-      content: '',
-      active: true,
-      delay_hours: 24
-    };
-    
-    setSequences(prev => [...prev, newStep]);
-    setEditingId(newStep.day); // Use day as temporary ID for new steps
+  const resetCreationFlow = () => {
+    setCreationMode('selection');
+    setCompanyInfo({
+      name: '',
+      painPoints: [''],
+      valueProposition: '',
+      callToAction: '',
+      overview: ''
+    });
+    setCurrentSequence(null);
   };
 
-  const updateStep = (index: number, updates: Partial<MessageStep>) => {
-    setSequences(prev => 
-      prev.map((step, i) => 
-        i === index ? { ...step, ...updates } : step
-      )
-    );
+  const addPainPoint = () => {
+    if (companyInfo.painPoints.length < 5) {
+      setCompanyInfo(prev => ({
+        ...prev,
+        painPoints: [...prev.painPoints, '']
+      }));
+    }
   };
 
-  const deleteStep = async (stepId: number, index: number) => {
+  const updatePainPoint = (index: number, value: string) => {
+    setCompanyInfo(prev => ({
+      ...prev,
+      painPoints: prev.painPoints.map((point, i) => i === index ? value : point)
+    }));
+  };
+
+  const removePainPoint = (index: number) => {
+    if (companyInfo.painPoints.length > 1) {
+      setCompanyInfo(prev => ({
+        ...prev,
+        painPoints: prev.painPoints.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const generateAISequence = async () => {
     try {
-      if (stepId) {
-        const { error } = await supabase
-          .from('message_sequences')
-          .delete()
-          .eq('id', stepId);
-        
-        if (error) throw error;
-      }
-      
-      setSequences(prev => prev.filter((_, i) => i !== index));
-      toast({
-        title: "Success",
-        description: "Sequence step deleted",
-      });
+      // Mock AI generation - would call AI API here
+      const aiGeneratedSequence: MessageSequence = {
+        name: `${companyInfo.name} Outbound AI Sequence 1`,
+        description: "AI-generated outreach sequence",
+        active: true,
+        totalSteps: 3,
+        totalDays: 7,
+        steps: [
+          {
+            day: 1,
+            message_type: 'email',
+            subject: `Boost Efficiency at ${companyInfo.name}`,
+            content: `Hi {first_name},\n\n${companyInfo.valueProposition}\n\n${companyInfo.callToAction}`,
+            active: true
+          },
+          {
+            day: 4,
+            message_type: 'email',
+            subject: 'Following up on our previous conversation',
+            content: 'Quick follow-up to see if you had a chance to review our previous message...',
+            active: true
+          },
+          {
+            day: 7,
+            message_type: 'email',
+            subject: 'Last chance to connect',
+            content: 'This is my final outreach. If you\'re interested in learning more...',
+            active: true
+          }
+        ]
+      };
+
+      setCurrentSequence(aiGeneratedSequence);
+      setCreationMode('finalize');
     } catch (error) {
-      console.error('Error deleting step:', error);
       toast({
         title: "Error",
-        description: "Failed to delete step",
+        description: "Failed to generate AI sequence",
         variant: "destructive",
       });
     }
   };
 
-  const saveStep = async (step: MessageStep, index: number) => {
+  const saveSequence = async () => {
+    if (!currentSequence) return;
+
     try {
-      const { id, ...stepData } = step;
-      
-      if (id) {
-        // Update existing
+      // Save sequence steps to database
+      for (const step of currentSequence.steps) {
         const { error } = await supabase
           .from('message_sequences')
-          .update(stepData)
-          .eq('id', id);
-        
-        if (error) throw error;
-      } else {
-        // Create new
-        const { data, error } = await supabase
-          .from('message_sequences')
-          .insert(stepData)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        
-        // Update local state with the new ID
-        setSequences(prev => 
-          prev.map((s, i) => 
-            i === index ? { ...s, id: data.id } : s
-          )
-        );
-      }
-      
-      setEditingId(null);
-      toast({
-        title: "Success",
-        description: "Sequence step saved",
-      });
-    } catch (error) {
-      console.error('Error saving step:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save step",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const createTwilioSequence = async () => {
-    setIsCreatingTwilioSequence(true);
-    try {
-      const whatsappSteps = sequences.filter(s => s.message_type === 'whatsapp' && s.active);
-      
-      if (whatsappSteps.length === 0) {
-        toast({
-          title: "No WhatsApp Steps",
-          description: "Add some WhatsApp message steps first",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const { data, error } = await supabase.functions.invoke('create-twilio-sequence', {
-        body: {
-          name: sequenceName,
-          description: "Automated customer nurture sequence",
-          messages: whatsappSteps.map(step => ({
+          .insert({
             day: step.day,
+            message_type: step.message_type,
+            subject: step.subject,
             content: step.content,
-            delay_minutes: (step.delay_hours || 24) * 60
-          }))
-        }
-      });
-      
-      if (error) throw error;
-      
+            active: step.active
+          });
+
+        if (error) throw error;
+      }
+
       toast({
-        title: "Twilio Sequence Created",
-        description: `Created ${data.templates_created} WhatsApp templates in Twilio`,
+        title: "Success",
+        description: "Sequence saved successfully",
       });
-      
+
+      setIsCreateDialogOpen(false);
+      resetCreationFlow();
+      fetchSequences();
     } catch (error) {
-      console.error('Error creating Twilio sequence:', error);
       toast({
         title: "Error",
-        description: "Failed to create Twilio sequence",
+        description: "Failed to save sequence",
         variant: "destructive",
       });
-    } finally {
-      setIsCreatingTwilioSequence(false);
     }
   };
 
-  const getMessageTypeIcon = (type: string) => {
-    switch (type) {
-      case 'email':
-        return <Mail className="w-4 h-4" />;
-      case 'whatsapp':
-        return <MessageSquare className="w-4 h-4" />;
-      case 'sms':
-        return <Phone className="w-4 h-4" />;
-      default:
-        return <Mail className="w-4 h-4" />;
-    }
-  };
-
-  const renderStepCard = (step: MessageStep, index: number) => {
-    const isEditing = editingId === step.id || (editingId === step.day && !step.id);
-    const isPreviewing = previewingId === (step.id || step.day);
-    
-    return (
-      <Card key={step.id || `new-${step.day}`} className="relative group">
-        {/* Step Number Badge */}
-        <div className="absolute -left-3 -top-3 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium z-10">
-          {index + 1}
-        </div>
-        
-        <CardHeader className="pb-4">
+  const renderCreateSequenceDialog = () => (
+    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                Day {isEditing ? (
-                  <Input
-                    type="number"
-                    value={step.day}
-                    onChange={(e) => updateStep(index, { day: parseInt(e.target.value) || 0 })}
-                    className="w-20 h-8"
-                    min="0"
-                    max="365"
-                  />
-                ) : (
-                  step.day
-                )}
-                {getMessageTypeIcon(step.message_type)}
-              </CardTitle>
-              
-              <Badge variant={step.message_type === 'email' ? 'default' : 'secondary'}>
-                {isEditing ? (
-                  <Select 
-                    value={step.message_type}
-                    onValueChange={(value) => updateStep(index, { message_type: value })}
-                  >
-                    <SelectTrigger className="w-28 h-6 text-xs border-0 bg-transparent">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                      <SelectItem value="sms">SMS</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  step.message_type
-                )}
-              </Badge>
-              
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={step.active}
-                  onCheckedChange={(checked) => updateStep(index, { active: checked })}
-                />
-                <span className="text-sm text-muted-foreground">
-                  {step.active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-            </div>
+            <DialogTitle>
+              {creationMode === 'selection' && 'Create a sequence'}
+              {creationMode === 'ai-assisted' && 'Let AI assist with your sequences'}
+              {creationMode === 'finalize' && 'Finalize your content'}
+            </DialogTitle>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                setIsCreateDialogOpen(false);
+                resetCreationFlow();
+              }}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </DialogHeader>
+
+        {creationMode === 'selection' && (
+          <div className="space-y-6">
+            <p className="text-muted-foreground">
+              Sequences are a series of automated or manual touchpoints and activities, designed to drive deeper engagement with your contacts.
+            </p>
             
-            <div className="flex items-center gap-2">
-              {!isEditing && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setPreviewingId(isPreviewing ? null : (step.id || step.day))}
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditingId(step.id || step.day)}
-                  >
-                    <Settings className="w-4 h-4" />
-                  </Button>
-                </>
-              )}
-              
-              {isEditing ? (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEditingId(null);
-                      if (!step.id) {
-                        // Remove unsaved new step
-                        setSequences(prev => prev.filter((_, i) => i !== index));
-                      }
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => saveStep(step, index)}
-                  >
-                    <Save className="w-4 h-4 mr-1" />
-                    Save
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => deleteStep(step.id || 0, index)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-          
-          {/* Timing Configuration */}
-          {isEditing && (
-            <div className="flex items-center gap-4 mt-4 p-3 bg-muted/30 rounded">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <Label className="text-sm">Send after:</Label>
-              <Input
-                type="number"
-                value={step.delay_hours || 24}
-                onChange={(e) => updateStep(index, { delay_hours: parseInt(e.target.value) || 24 })}
-                className="w-20 h-8"
-                min="1"
-              />
-              <span className="text-sm text-muted-foreground">hours</span>
-            </div>
-          )}
-          
-          {/* Subject Line for Emails */}
-          {(step.message_type === 'email' || isEditing) && (
-            <div className="space-y-2 mt-4">
-              <Label htmlFor={`subject-${index}`} className="text-sm font-medium">
-                Subject Line
-              </Label>
-              {isEditing ? (
-                <Input
-                  id={`subject-${index}`}
-                  value={step.subject || ''}
-                  onChange={(e) => updateStep(index, { subject: e.target.value })}
-                  placeholder="Email subject line..."
-                />
-              ) : (
-                <div className="text-sm text-muted-foreground p-2 bg-muted rounded">
-                  {step.subject || 'No subject set'}
-                </div>
-              )}
-            </div>
-          )}
-        </CardHeader>
-        
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor={`content-${index}`} className="text-sm font-medium">
-              Message Content
-            </Label>
-            {isEditing ? (
-              <Textarea
-                id={`content-${index}`}
-                value={step.content}
-                onChange={(e) => updateStep(index, { content: e.target.value })}
-                placeholder="Message content... Use {first_name}, {last_name}, {email} for personalization"
-                rows={6}
-                className="resize-none"
-              />
-            ) : (
-              <div className={`text-sm p-3 rounded transition-all ${
-                isPreviewing 
-                  ? 'bg-primary/10 border-2 border-primary' 
-                  : 'bg-muted text-muted-foreground'
-              }`}>
-                <div className="whitespace-pre-wrap">{step.content}</div>
-                {isPreviewing && (
-                  <div className="mt-3 pt-3 border-t text-xs text-primary">
-                    <strong>Preview Mode:</strong> This is how the message will appear to customers
+            <div className="grid grid-cols-2 gap-4">
+              <Card 
+                className="cursor-pointer hover:bg-accent transition-colors"
+                onClick={() => setCreationMode('ai-assisted')}
+              >
+                <CardContent className="p-6 text-center">
+                  <div className="mb-4">
+                    <div className="w-16 h-16 bg-primary/10 rounded-lg mx-auto flex items-center justify-center">
+                      <Sparkles className="w-8 h-8 text-primary" />
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
-          
-          {!isEditing && (
-            <div className="mt-4 pt-4 border-t text-xs text-muted-foreground flex justify-between">
-              <span>Last updated: {step.id ? 'Saved' : 'Not saved'}</span>
-              <span>{step.delay_hours || 24}h delay</span>
+                  <h3 className="font-semibold mb-2">AI-assisted</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Create a simple outbound sequence with one click.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="cursor-pointer hover:bg-accent transition-colors"
+                onClick={() => setCreationMode('templates')}
+              >
+                <CardContent className="p-6 text-center">
+                  <div className="mb-4">
+                    <div className="w-16 h-16 bg-yellow-100 rounded-lg mx-auto flex items-center justify-center">
+                      <FileText className="w-8 h-8 text-yellow-600" />
+                    </div>
+                  </div>
+                  <h3 className="font-semibold mb-2">Templates</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Start with one of our sequence templates.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="cursor-pointer hover:bg-accent transition-colors"
+                onClick={() => setCreationMode('clone')}
+              >
+                <CardContent className="p-6 text-center">
+                  <div className="mb-4">
+                    <div className="w-16 h-16 bg-blue-100 rounded-lg mx-auto flex items-center justify-center">
+                      <Copy className="w-8 h-8 text-blue-600" />
+                    </div>
+                  </div>
+                  <h3 className="font-semibold mb-2">Clone</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Make a copy of one of your existing sequences.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="cursor-pointer hover:bg-accent transition-colors"
+                onClick={() => setCreationMode('from-scratch')}
+              >
+                <CardContent className="p-6 text-center">
+                  <div className="mb-4">
+                    <div className="w-16 h-16 bg-pink-100 rounded-lg mx-auto flex items-center justify-center">
+                      <Rocket className="w-8 h-8 text-pink-600" />
+                    </div>
+                  </div>
+                  <h3 className="font-semibold mb-2">From scratch</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Create a new sequence from scratch.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
+          </div>
+        )}
+
+        {creationMode === 'ai-assisted' && (
+          <div className="grid grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <span className="text-sm text-primary font-medium">Apollo AI-powered</span>
+              </div>
+              
+              <div>
+                <h3 className="text-xl font-semibold mb-2">Let AI assist with your sequences</h3>
+                <p className="text-muted-foreground">
+                  Use Apollo AI to generate a complete campaign with sequential contact points to engage target audiences at scale.
+                </p>
+              </div>
+
+              <div className="space-y-4 max-w-sm">
+                <div className="w-48 h-48 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <Sparkles className="w-12 h-12 text-purple-600 mx-auto mb-2" />
+                    <div className="text-purple-800 font-medium">AI Magic</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <h4 className="font-semibold">Review your company information</h4>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="company-name">Company or product name*</Label>
+                  <p className="text-xs text-muted-foreground mb-2">Add your company, product, or service name.</p>
+                  <Input
+                    id="company-name"
+                    value={companyInfo.name}
+                    onChange={(e) => setCompanyInfo(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g. Ask"
+                  />
+                  {!companyInfo.name && (
+                    <p className="text-xs text-red-500 mt-1">Company or product name is required</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label>Customer pain points*</Label>
+                  <p className="text-xs text-muted-foreground mb-2">Add at least 3 pain points your product or service is solving.</p>
+                  {companyInfo.painPoints.map((point, index) => (
+                    <div key={index} className="flex gap-2 mb-2">
+                      <Textarea
+                        value={point}
+                        onChange={(e) => updatePainPoint(index, e.target.value)}
+                        placeholder="e.g. Too much manual work finding prospects and creating personalized outreaches"
+                        rows={2}
+                      />
+                      {companyInfo.painPoints.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removePainPoint(index)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  {companyInfo.painPoints.length < 5 && (
+                    <Button variant="outline" size="sm" onClick={addPainPoint}>
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add pain point
+                    </Button>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="value-prop">Value proposition*</Label>
+                  <p className="text-xs text-muted-foreground mb-2">Add at least 3 benefits of using your product/service.</p>
+                  <Textarea
+                    id="value-prop"
+                    value={companyInfo.valueProposition}
+                    onChange={(e) => setCompanyInfo(prev => ({ ...prev, valueProposition: e.target.value }))}
+                    placeholder="Abelian delivers information technology services at the speed of AI, ensuring rapid and efficient solutions tailored to meet the evolving needs of businesses."
+                    rows={3}
+                  />
+                  <div className="text-xs text-muted-foreground text-right mt-1">
+                    {companyInfo.valueProposition.length}/600
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="cta">Call-to-action*</Label>
+                  <p className="text-xs text-muted-foreground mb-2">Add an action you want the recipient to take. E.g. Book a meeting</p>
+                  <Textarea
+                    id="cta"
+                    value={companyInfo.callToAction}
+                    onChange={(e) => setCompanyInfo(prev => ({ ...prev, callToAction: e.target.value }))}
+                    placeholder="Contact us today to learn how our AI-driven IT services can transform your business operations."
+                    rows={2}
+                  />
+                  <div className="text-xs text-muted-foreground text-right mt-1">
+                    {companyInfo.callToAction.length}/300
+                  </div>
+                </div>
+
+                <div>
+                  <details>
+                    <summary className="cursor-pointer text-sm text-primary">Hide additional inputs ▲</summary>
+                    <div className="mt-4">
+                      <Label htmlFor="company-overview">Company overview</Label>
+                      <p className="text-xs text-muted-foreground mb-2">Add a brief description of what your company or product does.</p>
+                      <Textarea
+                        id="company-overview"
+                        value={companyInfo.overview}
+                        onChange={(e) => setCompanyInfo(prev => ({ ...prev, overview: e.target.value }))}
+                        placeholder="e.g. The only data intelligence and sales engagement platform you'll ever need"
+                        rows={2}
+                      />
+                    </div>
+                  </details>
+                </div>
+              </div>
+
+              <div className="flex justify-between pt-4">
+                <Button
+                  variant="outline"
+                  onClick={resetCreationFlow}
+                >
+                  Reset inputs
+                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCreationMode('selection')}
+                  >
+                    Back to sequence
+                  </Button>
+                  <Button
+                    onClick={generateAISequence}
+                    disabled={!companyInfo.name || companyInfo.painPoints.some(p => !p.trim())}
+                    className="bg-yellow-400 hover:bg-yellow-500 text-black"
+                  >
+                    Generate new sequence
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {creationMode === 'finalize' && currentSequence && (
+          <div className="grid grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold mb-2">Finalize your content</h3>
+                <p className="text-muted-foreground">
+                  Review and edit your emails, then save your sequence.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h4 className="text-lg font-semibold">{currentSequence.name}</h4>
+                <Badge variant="secondary">
+                  {currentSequence.totalSteps} steps | {currentSequence.totalDays} days in sequence
+                </Badge>
+              </div>
+
+              <div className="space-y-4">
+                {currentSequence.steps.map((step, index) => (
+                  <Card key={index} className="overflow-hidden">
+                    <CardHeader 
+                      className="cursor-pointer"
+                      onClick={() => setExpandedStep(expandedStep === index ? null : index)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium">
+                            {index + 1}
+                          </div>
+                          <Mail className="w-4 h-4 text-muted-foreground" />
+                          <div>
+                            <div className="font-medium">Day {step.day} • Outreach</div>
+                            <div className="text-sm text-muted-foreground">Automatic email</div>
+                          </div>
+                        </div>
+                        {expandedStep === index ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </div>
+                    </CardHeader>
+                    
+                    {expandedStep === index && (
+                      <CardContent className="pt-0">
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Subject</Label>
+                            <Input 
+                              value={step.subject || ''}
+                              onChange={(e) => {
+                                const updatedSteps = currentSequence.steps.map((s, i) => 
+                                  i === index ? { ...s, subject: e.target.value } : s
+                                );
+                                setCurrentSequence({ ...currentSequence, steps: updatedSteps });
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <Textarea
+                              value={step.content}
+                              onChange={(e) => {
+                                const updatedSteps = currentSequence.steps.map((s, i) => 
+                                  i === index ? { ...s, content: e.target.value } : s
+                                );
+                                setCurrentSequence({ ...currentSequence, steps: updatedSteps });
+                              }}
+                              rows={6}
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))}
+              </div>
+
+              <div className="flex justify-between pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setCreationMode('ai-assisted')}
+                >
+                  Edit my information
+                </Button>
+                <Button
+                  onClick={saveSequence}
+                  className="bg-yellow-400 hover:bg-yellow-500 text-black"
+                >
+                  Save sequence
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 
   if (loading) {
     return (
@@ -442,80 +588,75 @@ export default function EnhancedSequenceBuilder({ onSequenceChange }: SequenceBu
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-foreground">Sequence Builder</h2>
-          <p className="text-muted-foreground">Create automated customer communication workflows</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={createTwilioSequence}
-            disabled={isCreatingTwilioSequence}
-            className="flex items-center gap-2"
-          >
-            <Zap className={`w-4 h-4 ${isCreatingTwilioSequence ? 'animate-spin' : ''}`} />
-            {isCreatingTwilioSequence ? 'Creating...' : 'Sync to Twilio'}
-          </Button>
-          <Button onClick={addNewStep} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Add Step
-          </Button>
+          <h1 className="text-3xl font-bold">Sequences</h1>
+          <div className="flex items-center gap-6 mt-2">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">All Sequences</span>
+              <Badge variant="secondary">Analytics</Badge>
+            </div>
+            <Button
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="bg-yellow-400 hover:bg-yellow-500 text-black"
+            >
+              Create sequence
+            </Button>
+          </div>
         </div>
       </div>
-      
-      {/* Sequence Name */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Sequence Configuration</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="sequence-name">Sequence Name</Label>
-              <Input
-                id="sequence-name"
-                value={sequenceName}
-                onChange={(e) => setSequenceName(e.target.value)}
-                placeholder="Enter sequence name..."
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-primary">{sequences.filter(s => s.active).length}</div>
-                <div className="text-sm text-muted-foreground">Active Steps</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-secondary">{sequences.filter(s => s.message_type === 'email').length}</div>
-                <div className="text-sm text-muted-foreground">Email Steps</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-accent">{sequences.filter(s => s.message_type === 'whatsapp').length}</div>
-                <div className="text-sm text-muted-foreground">WhatsApp Steps</div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Sequence Steps */}
-      <div className="space-y-6">
-        {sequences.map((step, index) => renderStepCard(step, index))}
-        
-        {sequences.length === 0 && (
-          <Card className="border-dashed">
-            <CardContent className="py-12 text-center">
+
+      {/* Sequences List */}
+      <div className="space-y-4">
+        {sequences.length === 0 ? (
+          <Card className="text-center py-12">
+            <CardContent>
               <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">No sequence steps yet</h3>
+              <h3 className="text-lg font-medium mb-2">No sequences yet</h3>
               <p className="text-muted-foreground mb-4">
-                Create your first automated message step to get started
+                Create your first automated sequence to start engaging customers
               </p>
-              <Button onClick={addNewStep} className="flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Add First Step
+              <Button 
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="bg-yellow-400 hover:bg-yellow-500 text-black"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create sequence
               </Button>
             </CardContent>
           </Card>
+        ) : (
+          <div className="border rounded-lg">
+            <div className="grid grid-cols-8 gap-4 p-4 bg-muted/30 text-sm font-medium text-muted-foreground border-b">
+              <div>ACTIVATE</div>
+              <div>NAME</div>
+              <div>STEPS</div>
+              <div>FINISHED</div>
+              <div>SCHEDULED</div>
+              <div>DELIVERED</div>
+              <div>REPLIES</div>
+              <div>BOUNCE</div>
+            </div>
+            
+            {sequences.map((sequence) => (
+              <div key={sequence.id} className="grid grid-cols-8 gap-4 p-4 border-b last:border-b-0 hover:bg-muted/10">
+                <div>
+                  <div className="w-6 h-6 rounded border-2 border-muted-foreground"></div>
+                </div>
+                <div>
+                  <div className="font-medium">{sequence.name}</div>
+                </div>
+                <div>{sequence.totalSteps}</div>
+                <div>-</div>
+                <div>-</div>
+                <div>-</div>
+                <div>-</div>
+                <div>-</div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
+
+      {renderCreateSequenceDialog()}
     </div>
   );
 }
