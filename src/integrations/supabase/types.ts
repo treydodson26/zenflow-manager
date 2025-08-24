@@ -426,6 +426,7 @@ export type Database = {
           recipient_phone: string | null
           sent_at: string | null
           subject: string | null
+          twilio_message_sid: string | null
           updated_at: string | null
           whatsapp_message_id: string | null
         }
@@ -445,6 +446,7 @@ export type Database = {
           recipient_phone?: string | null
           sent_at?: string | null
           subject?: string | null
+          twilio_message_sid?: string | null
           updated_at?: string | null
           whatsapp_message_id?: string | null
         }
@@ -464,6 +466,7 @@ export type Database = {
           recipient_phone?: string | null
           sent_at?: string | null
           subject?: string | null
+          twilio_message_sid?: string | null
           updated_at?: string | null
           whatsapp_message_id?: string | null
         }
@@ -1378,6 +1381,7 @@ export type Database = {
           id: number
           message_type: string
           subject: string | null
+          twilio_content_sid: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1388,6 +1392,7 @@ export type Database = {
           id?: number
           message_type: string
           subject?: string | null
+          twilio_content_sid?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1398,6 +1403,7 @@ export type Database = {
           id?: number
           message_type?: string
           subject?: string | null
+          twilio_content_sid?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1535,6 +1541,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      twilio_sequences: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          template_sids: Json
+          twilio_service_sid: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          template_sids?: Json
+          twilio_service_sid: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          template_sids?: Json
+          twilio_service_sid?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
