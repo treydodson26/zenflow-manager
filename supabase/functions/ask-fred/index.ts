@@ -18,8 +18,6 @@ const supabase = SUPABASE_URL && SERVICE_ROLE_KEY
 
 const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null as any;
 
-// OpenAI helpers removed; using Anthropic Messages API below.
-
 // Utility helpers for analytics
 function toDate(d: string | Date | null | undefined): Date | null {
   if (!d) return null;
@@ -62,24 +60,390 @@ function nextBirthdayWithinDays(bday: string | Date | null | undefined, days: nu
   return diffDays(next, today) <= days;
 }
 
-// Tool handlers
+// Enhanced tool handlers with 4-stage pipeline integration
 const tools = {
+  // ========== NEW: 4-STAGE PIPELINE TOOLS ==========
+  async get_pipeline_overview() {
+    console.log("🏢 Fetching 4-stage pipeline overview from clients table...");
+    
+    try {
+      // Check if clients table has data
+      const { count } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true });
+      
+      if (!count || count === 0) {
+        console.log("⚠️ No data in clients table, falling back to customers");
+        return await tools.stats_overview();
+      }
+
+      const { data, error } = await supabase
+        .from('clients')
+        .select('pipeline_stage, intro_status, days_since_registration, intro_day, is_intro_offer, has_attendance_data');
+
+      if (error) throw error;
+
+      const stages = {
+        prospect: 0,
+        intro_trial: 0, 
+        active: 0,
+        at_risk: 0
+      };
+      
+      const introOfferBreakdown = {
+        day_0_7: 0,
+        day_8_14: 0, 
+        day_15_21: 0,
+        day_22_28: 0,
+        expired: 0
+      };
+
+      let totalClients = 0;
+      let introOfferCount = 0;
+      let atRiskCount = 0;
+
+      for (const client of (data || [])) {
+        totalClients++;
+        
+        // Map pipeline stages
+        const stage = client.pipeline_stage?.toLowerCase() || 'prospect';
+        if (stages[stage] !== undefined) {
+          stages[stage]++;
+        }
+
+        // Track intro offers
+        if (client.is_intro_offer) {
+          introOfferCount++;
+          const day = client.intro_day || 0;
+          if (day <= 7) introOfferBreakdown.day_0_7++;
+          else if (day <= 14) introOfferBreakdown.day_8_14++;
+          else if (day <= 21) introOfferBreakdown.day_15_21++;
+          else if (day <= 28) introOfferBreakdown.day_22_28++;
+          else introOfferBreakdown.expired++;
+        }
+
+        // Track at-risk indicators
+        if (client.days_since_registration > 90 && !client.has_attendance_data) {
+          atRiskCount++;
+        }
+      }
+
+      return {
+        total_clients: totalClients,
+        stage_breakdown: stages,
+        intro_offer_summary: {
+          total_active: introOfferCount,
+          day_breakdown: introOfferBreakdown
+        },
+        at_risk_indicators: {
+          no_attendance_90d: atRiskCount
+        },
+        data_source: 'clients_table'
+      };
+    } catch (error) {
+      console.error("❌ Pipeline overview error:", error);
+      throw error;
+    }
+  },
+
+  async get_intro_offer_status(params: { day_bucket?: string; limit?: number }) {
+    console.log("📊 Fetching intro offer status breakdown...");
+    
+    const limit = Math.max(1, Math.min(200, Number(params?.limit) || 25));
+    const bucket = params?.day_bucket || 'all';
+
+    try {
+      let query = supabase
+        .from('clients')
+        .select('client_name, first_name, last_name, client_email, intro_day, intro_start_date, intro_end_date, intro_status, pipeline_stage')
+        .eq('is_intro_offer', true);
+
+      // Apply day bucket filter
+      if (bucket !== 'all') {
+        if (bucket === '0-7') {
+          query = query.gte('intro_day', 0).lte('intro_day', 7);
+        } else if (bucket === '8-14') {
+          query = query.gte('intro_day', 8).lte('intro_day', 14);
+        } else if (bucket === '15-21') {
+          query = query.gte('intro_day', 15).lte('intro_day', 21);
+        } else if (bucket === '22-28') {
+          query = query.gte('intro_day', 22).lte('intro_day', 28);
+        } else if (bucket === 'expired') {
+          query = query.gt('intro_day', 28);
+        }
+      }
+
+      const { data, error } = await query
+        .order('intro_day', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+
+      const results = (data || []).map(client => ({
+        name: client.client_name || `${client.first_name || ''} ${client.last_name || ''}`.trim(),
+        email: client.client_email,
+        intro_day: client.intro_day,
+        intro_status: client.intro_status,
+        pipeline_stage: client.pipeline_stage,
+        intro_start_date: client.intro_start_date,
+        intro_end_date: client.intro_end_date,
+        recommended_action: client.intro_day >= 21 ? 'urgent_followup' : client.intro_day >= 14 ? 'gentle_reminder' : 'welcome_sequence'
+      }));
+
+      return {
+        bucket_filter: bucket,
+        count: results.length,
+        clients: results,
+        next_actions: {
+          urgent_followup: results.filter(c => c.recommended_action === 'urgent_followup').length,
+          gentle_reminder: results.filter(c => c.recommended_action === 'gentle_reminder').length,
+          welcome_sequence: results.filter(c => c.recommended_action === 'welcome_sequence').length
+        }
+      };
+    } catch (error) {
+      console.error("❌ Intro offer status error:", error);
+      throw error;
+    }
+  },
+
+  async get_pipeline_stage_clients(params: { stage: string; limit?: number; include_actions?: boolean }) {
+    console.log(`📋 Fetching clients in pipeline stage: ${params.stage}`);
+    
+    const stage = String(params?.stage || '').toLowerCase();
+    const limit = Math.max(1, Math.min(200, Number(params?.limit) || 25));
+    const includeActions = Boolean(params?.include_actions);
+
+    const { data, error } = await supabase
+      .from('clients')
+      .select('client_name, first_name, last_name, client_email, phone, pipeline_stage, pipeline_segment, last_seen, days_since_last_visit, days_since_registration, total_classes_attended, group_classes_booked, is_intro_offer, intro_day')
+      .ilike('pipeline_stage', stage)
+      .order('last_seen', { ascending: false, nullsFirst: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    const results = (data || []).map(client => {
+      const name = client.client_name || `${client.first_name || ''} ${client.last_name || ''}`.trim();
+      let recommendedAction = 'none';
+      
+      if (includeActions) {
+        // Generate stage-specific recommendations
+        if (stage === 'prospect') {
+          recommendedAction = client.days_since_registration > 7 ? 'intro_offer_outreach' : 'welcome_sequence';
+        } else if (stage === 'intro_trial') {
+          recommendedAction = client.intro_day >= 21 ? 'conversion_push' : client.intro_day >= 14 ? 'check_in_call' : 'nurture_sequence';
+        } else if (stage === 'active') {
+          recommendedAction = client.days_since_last_visit > 14 ? 'retention_outreach' : 'upsell_opportunity';
+        } else if (stage === 'at_risk') {
+          recommendedAction = client.days_since_last_visit > 60 ? 'win_back_campaign' : 'personal_check_in';
+        }
+      }
+
+      return {
+        name,
+        email: client.client_email,
+        phone: client.phone,
+        pipeline_stage: client.pipeline_stage,
+        pipeline_segment: client.pipeline_segment,
+        last_seen: client.last_seen,
+        days_since_last_visit: client.days_since_last_visit,
+        days_since_registration: client.days_since_registration,
+        total_classes_attended: client.total_classes_attended,
+        group_classes_booked: client.group_classes_booked,
+        is_intro_offer: client.is_intro_offer,
+        intro_day: client.intro_day,
+        recommended_action: recommendedAction
+      };
+    });
+
+    return {
+      stage,
+      count: results.length,
+      clients: results,
+      summary: includeActions ? {
+        action_breakdown: {
+          intro_offer_outreach: results.filter(c => c.recommended_action === 'intro_offer_outreach').length,
+          conversion_push: results.filter(c => c.recommended_action === 'conversion_push').length,
+          retention_outreach: results.filter(c => c.recommended_action === 'retention_outreach').length,
+          win_back_campaign: results.filter(c => c.recommended_action === 'win_back_campaign').length,
+          personal_check_in: results.filter(c => c.recommended_action === 'personal_check_in').length
+        }
+      } : null
+    };
+  },
+
+  async get_at_risk_analysis(params: { risk_type?: string; limit?: number }) {
+    console.log("⚠️ Running at-risk client analysis...");
+    
+    const riskType = params?.risk_type || 'all';
+    const limit = Math.max(1, Math.min(200, Number(params?.limit) || 50));
+
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('client_name, first_name, last_name, client_email, phone, pipeline_stage, days_since_last_visit, days_since_registration, last_seen, total_classes_attended, group_classes_booked, has_attendance_data, marketing_email_opt_in, marketing_text_opt_in');
+
+      if (error) throw error;
+
+      const atRiskClients = [];
+      const now = new Date();
+
+      for (const client of (data || [])) {
+        const name = client.client_name || `${client.first_name || ''} ${client.last_name || ''}`.trim();
+        let riskLevel = 'low';
+        let riskReasons = [];
+        
+        // Define risk factors
+        if (client.days_since_last_visit > 90) {
+          riskLevel = 'high';
+          riskReasons.push('90+ days inactive');
+        } else if (client.days_since_last_visit > 60) {
+          riskLevel = 'medium';
+          riskReasons.push('60+ days inactive');
+        }
+
+        if (client.days_since_registration > 180 && client.total_classes_attended < 5) {
+          riskLevel = 'high';
+          riskReasons.push('Low engagement despite long tenure');
+        }
+
+        if (client.group_classes_booked > client.total_classes_attended * 1.5) {
+          riskReasons.push('High cancellation rate');
+          if (riskLevel === 'low') riskLevel = 'medium';
+        }
+
+        if (!client.marketing_email_opt_in && !client.marketing_text_opt_in) {
+          riskReasons.push('No marketing consent');
+        }
+
+        // Apply risk type filter
+        const includeClient = riskType === 'all' || 
+          (riskType === 'high' && riskLevel === 'high') ||
+          (riskType === 'medium' && riskLevel === 'medium') ||
+          (riskType === 'inactive' && client.days_since_last_visit > 60) ||
+          (riskType === 'low_engagement' && client.total_classes_attended < 5 && client.days_since_registration > 90);
+
+        if (includeClient && (riskLevel !== 'low' || riskReasons.length > 0)) {
+          atRiskClients.push({
+            name,
+            email: client.client_email,
+            phone: client.phone,
+            pipeline_stage: client.pipeline_stage,
+            risk_level: riskLevel,
+            risk_reasons: riskReasons,
+            days_since_last_visit: client.days_since_last_visit,
+            days_since_registration: client.days_since_registration,
+            total_classes_attended: client.total_classes_attended,
+            group_classes_booked: client.group_classes_booked,
+            has_contact_consent: client.marketing_email_opt_in || client.marketing_text_opt_in,
+            recommended_action: riskLevel === 'high' ? 'immediate_intervention' : riskLevel === 'medium' ? 'proactive_outreach' : 'monitor'
+          });
+        }
+      }
+
+      // Sort by risk level and days inactive
+      atRiskClients.sort((a, b) => {
+        const riskOrder = { high: 3, medium: 2, low: 1 };
+        if (riskOrder[a.risk_level] !== riskOrder[b.risk_level]) {
+          return riskOrder[b.risk_level] - riskOrder[a.risk_level];
+        }
+        return (b.days_since_last_visit || 0) - (a.days_since_last_visit || 0);
+      });
+
+      return {
+        risk_type_filter: riskType,
+        total_at_risk: atRiskClients.length,
+        clients: atRiskClients.slice(0, limit),
+        risk_summary: {
+          high_risk: atRiskClients.filter(c => c.risk_level === 'high').length,
+          medium_risk: atRiskClients.filter(c => c.risk_level === 'medium').length,
+          need_immediate_action: atRiskClients.filter(c => c.recommended_action === 'immediate_intervention').length,
+          contactable: atRiskClients.filter(c => c.has_contact_consent).length
+        }
+      };
+    } catch (error) {
+      console.error("❌ At-risk analysis error:", error);
+      throw error;
+    }
+  },
+
+  // ========== ENHANCED EXISTING TOOLS ==========
   async get_inactive_customers(params: { days?: number; limit?: number }) {
+    console.log(`🔍 Fetching inactive customers (${params?.days || 30}+ days)`);
     const days = Math.max(1, Math.min(3650, Number(params?.days) || 30));
     const limit = Math.max(1, Math.min(200, Number(params?.limit) || 25));
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
     const cutoffISO = cutoff.toISOString().slice(0, 10);
 
-    const { data, error } = await supabase
-      .from("customers")
-      .select("id, first_name, last_name, client_email, status, last_class_date, total_lifetime_value")
-      .or(`last_class_date.lt.${cutoffISO},last_class_date.is.null`)
-      .order("last_class_date", { ascending: true, nullsFirst: true })
-      .limit(limit);
+    try {
+      // Try clients table first, fall back to customers
+      const { count: clientsCount } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true });
 
-    if (error) throw error;
-    return data;
+      let data, error;
+      let dataSource = 'customers';
+
+      if (clientsCount && clientsCount > 0) {
+        console.log("📊 Using clients table for inactive analysis");
+        dataSource = 'clients';
+        ({ data, error } = await supabase
+          .from("clients")
+          .select("id, first_name, last_name, client_name, client_email, pipeline_stage, last_visit_date, days_since_last_visit, total_classes_attended")
+          .or(`last_visit_date.lt.${cutoffISO},last_visit_date.is.null`)
+          .order("last_visit_date", { ascending: true, nullsFirst: true })
+          .limit(limit));
+      } else {
+        console.log("📊 Using customers table for inactive analysis");
+        ({ data, error } = await supabase
+          .from("customers")
+          .select("id, first_name, last_name, client_email, status, last_class_date, total_lifetime_value")
+          .or(`last_class_date.lt.${cutoffISO},last_class_date.is.null`)
+          .order("last_class_date", { ascending: true, nullsFirst: true })
+          .limit(limit));
+      }
+
+      if (error) throw error;
+
+      const results = (data || []).map(customer => {
+        const name = customer.client_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
+        const lastActivity = customer.last_visit_date || customer.last_class_date;
+        const daysInactive = customer.days_since_last_visit || (lastActivity ? Math.floor((new Date().getTime() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24)) : null);
+        
+        let recommendedAction = 'none';
+        if (daysInactive >= 90) recommendedAction = 'win_back_campaign';
+        else if (daysInactive >= 60) recommendedAction = 'check_in_call';
+        else if (daysInactive >= 30) recommendedAction = 'gentle_nudge';
+
+        return {
+          name,
+          email: customer.client_email,
+          pipeline_stage: customer.pipeline_stage || customer.status,
+          last_activity_date: lastActivity,
+          days_inactive: daysInactive,
+          total_classes: customer.total_classes_attended || null,
+          ltv: customer.total_lifetime_value || null,
+          recommended_action: recommendedAction,
+          data_source: dataSource
+        };
+      });
+
+      return {
+        days_filter: days,
+        count: results.length,
+        customers: results,
+        data_source: dataSource,
+        action_summary: {
+          win_back_needed: results.filter(c => c.recommended_action === 'win_back_campaign').length,
+          check_in_needed: results.filter(c => c.recommended_action === 'check_in_call').length,
+          gentle_nudge: results.filter(c => c.recommended_action === 'gentle_nudge').length
+        }
+      };
+    } catch (error) {
+      console.error("❌ Get inactive customers error:", error);
+      throw error;
+    }
   },
   async get_customers_by_status(params: { status: string; limit?: number }) {
     const status = String(params?.status || "").toLowerCase();
@@ -146,7 +510,7 @@ const tools = {
   async stats_overview() {
     console.log("🔍 Fetching customer status overview via RPC...");
 
-    // Call the new RPC function to get aggregated stats directly from the database
+    // Call the RPC function to get aggregated stats directly from the database
     const { data, error } = await supabase.rpc('get_customer_stats_overview');
 
     if (error) {
@@ -156,17 +520,10 @@ const tools = {
 
     console.log("📈 Received stats from RPC:", data);
 
-    // The RPC returns the data in the exact format we need.
-    // Example `data` object:
-    // {
-    //   "total_customers": 1234,
-    //   "status_breakdown": { "active": 500, "prospect": 200, "unknown": 34 }
-    // }
-
     return {
       total_customers: data.total_customers,
       status_breakdown: data.status_breakdown,
-      fetched_records: data.total_customers // The total count is now directly available
+      fetched_records: data.total_customers
     };
   },
   async analytics(params: { metric: string; periodDays?: number; bucket?: string; limit?: number }) {
@@ -810,33 +1167,116 @@ serve(async (req) => {
     }
 
     const instructions = `You are Fred, the Talo Yoga studio assistant.
-- You can answer questions about customers by calling analytics tools.
-- You can also generate images from text descriptions using the generate_image tool.
-- For image requests, always use the generate_image tool to create marketing materials, posters, social media content, etc.
-- Prefer the analytics tool for natural-language analytics questions.
-- Format all responses using GitHub Flavored Markdown.
-- Use headings, bold text, and bullet points to structure your answers clearly.
-- For lists, use markdown asterisks (*). For example:
-  * This is a bullet point.
-  * This is another bullet point.
-- Keep answers concise and actionable.
-- If data is insufficient, say so and suggest the next step.
 
-Intent mapping examples (use these to choose analytics metric and args):
-- "Who hasn’t visited in 60–90 days" -> analytics(metric="inactive_bucket", bucket="60-90")
-- "Who’s active last 30 days" -> analytics(metric="recent_active", periodDays=30)
-- "Retention by cohort" -> analytics(metric="retention_by_cohort")
-- "Upcoming birthdays" -> analytics(metric="upcoming_birthdays_30d")
-- "ClassPass vs direct retention" -> analytics(metric="retention_by_source")
-- "Missing phone numbers" -> analytics(metric="missing_phone_counts")
-- "Duplicate emails" -> analytics(metric="duplicate_emails")
-- "Age distribution" -> analytics(metric="age_distribution")
-- "Waiver completion rate" -> analytics(metric="waiver_overall_rate")`;
+**ENHANCED CAPABILITIES:**
+- 🏢 **4-Stage Pipeline Analysis**: Get insights into the prospect → intro_trial → active → at_risk pipeline
+- 📊 **Advanced Customer Analytics**: Comprehensive metrics from both legacy customers table and enhanced clients table
+- 🎯 **Risk Assessment**: Identify at-risk clients with intervention recommendations
+- 📈 **Intro Offer Tracking**: Monitor intro offer progress with day-based breakdowns
+- 🎨 **Marketing Image Generation**: Create visual content for campaigns and social media
+- 🔄 **Smart Data Routing**: Automatically use the most current data source (clients vs customers table)
+
+**RESPONSE FORMAT:**
+- Format all responses using GitHub Flavored Markdown with clear structure
+- Use headings (##), bold text (**text**), and bullet points (*) for readability
+- Include actionable recommendations with next steps
+- For client lists, show key metrics like pipeline stage, days inactive, recommended actions
+- Keep answers concise but comprehensive
+
+**TOOL SELECTION GUIDELINES:**
+
+*Pipeline & Stage Analysis:*
+- "Pipeline overview" or "stage breakdown" → get_pipeline_overview()
+- "Intro offer clients" or "trial status" → get_intro_offer_status(day_bucket="all")
+- "Clients in [stage]" → get_pipeline_stage_clients(stage="[prospect/intro_trial/active/at_risk]")
+- "At-risk analysis" → get_at_risk_analysis(risk_type="all")
+
+*Customer Research:*
+- "Inactive for X days" → get_inactive_customers(days=X)
+- "Customers by status" → get_customers_by_status(status="[status]")
+- "Search for [name/email]" → search_customers(query="[query]")
+- "Top spenders" → get_top_customers_by_ltv()
+
+*Analytics Deep Dives:*
+- Complex metrics → analytics(metric="[metric_name]")
+- Retention analysis → analytics(metric="retention_by_cohort")
+- Marketing opt-ins → analytics(metric="marketing_optins_summary")
+- Age/demographic analysis → analytics(metric="age_distribution")
+
+*Visual Content:*
+- "Create image/poster/social media" → generate_image(prompt="[description]")
+
+**ACTION-ORIENTED OUTPUTS:**
+When returning client lists, always include:
+- Pipeline stage and current status
+- Days since last activity
+- Recommended next action (e.g., "urgent_followup", "gentle_reminder", "win_back_campaign")
+- Contact preferences (email/SMS opt-ins)
+
+**DATA SOURCE INTELLIGENCE:**
+- Fred automatically uses the enhanced clients table when available
+- Falls back to customers table for legacy compatibility
+- Clearly indicates data source in technical responses
+- Combines insights from both tables when appropriate`;
 
     const toolDefs = [
+      // ========== NEW: 4-STAGE PIPELINE TOOLS ==========
+      {
+        name: "get_pipeline_overview",
+        description: "Get comprehensive overview of the 4-stage client pipeline (prospect, intro_trial, active, at_risk) with intro offer breakdown and at-risk indicators. Uses the enhanced clients table when available.",
+        input_schema: { type: "object", properties: {} },
+      },
+      {
+        name: "get_intro_offer_status",
+        description: "Analyze clients currently in intro offer period with day-based breakdown (0-7, 8-14, 15-21, 22-28, expired) and recommended actions.",
+        input_schema: {
+          type: "object",
+          properties: {
+            day_bucket: { 
+              type: "string", 
+              description: "Filter by intro offer day bucket: '0-7', '8-14', '15-21', '22-28', 'expired', or 'all'",
+              enum: ["0-7", "8-14", "15-21", "22-28", "expired", "all"]
+            },
+            limit: { type: "number", description: "Max records to return (default: 25)" }
+          }
+        }
+      },
+      {
+        name: "get_pipeline_stage_clients",
+        description: "Get detailed list of clients in a specific pipeline stage with engagement metrics and recommended actions.",
+        input_schema: {
+          type: "object",
+          properties: {
+            stage: { 
+              type: "string", 
+              description: "Pipeline stage to filter by: prospect, intro_trial, active, at_risk",
+              enum: ["prospect", "intro_trial", "active", "at_risk"]
+            },
+            limit: { type: "number", description: "Max records to return (default: 25)" },
+            include_actions: { type: "boolean", description: "Include recommended actions for each client (default: false)" }
+          },
+          required: ["stage"]
+        }
+      },
+      {
+        name: "get_at_risk_analysis",
+        description: "Comprehensive at-risk client analysis with risk scoring, reasons, and intervention recommendations.",
+        input_schema: {
+          type: "object",
+          properties: {
+            risk_type: { 
+              type: "string", 
+              description: "Filter by risk type: 'all', 'high', 'medium', 'inactive', 'low_engagement'",
+              enum: ["all", "high", "medium", "inactive", "low_engagement"]
+            },
+            limit: { type: "number", description: "Max records to return (default: 50)" }
+          }
+        }
+      },
+      // ========== EXISTING TOOLS (ENHANCED) ==========
       {
         name: "get_inactive_customers",
-        description: "List customers who have not attended in N days (or never).",
+        description: "List customers who have not attended in N days (or never). Enhanced with pipeline data when available.",
         input_schema: {
           type: "object",
           properties: {
@@ -897,7 +1337,7 @@ Intent mapping examples (use these to choose analytics metric and args):
       },
       {
         name: "analytics",
-        description: "Comprehensive analytics over customers. Metrics include: recent_active, inactive_bucket (bucket: '30-60'|'60-90'|'90+'), avg_lifetime, longest_standing, one_time_vs_repeat, retention_by_cohort, early_engaged_inactive, marketing_optins_summary, active_no_marketing, phone_without_sms_optin, marketing_retention_correlation, transactional_not_marketing, contact_info_completeness, classpass_optin_summary, waiver_missing_recent, waiver_overall_rate, recent_no_waiver_7d, waiver_rate_by_tenure, classpass_without_waivers, source_split, age_distribution, upcoming_birthdays_30d, birthdays_by_month, birthday_completion_rate, city_distribution, tag_distribution, missing_fields_overview, missing_phone_counts, incomplete_names, duplicate_emails, duplicate_phones, no_tags_stats, profile_completeness_breakdown, acquisition_by_month, growth_trend, lifetime_stats, milestones_summary, milestones_distribution, registration_by_hour, registration_by_dow, retention_by_source, classpass_conversion_proxy, optin_rates_by_source, waiver_by_source, engagement_duration_by_source, lapsed_with_optins_30_90, regular_but_lapsed_60_90, inactive_birthdays_soon, inactive_channel_reachability, journey_buckets, same_day_vs_returned, contact_info_retention_correlation, seasonal_registration_patterns, first_visit_time_of_day_buckets.",
+        description: "Comprehensive analytics over customers. Many metrics available including retention, marketing, demographics, and more.",
         input_schema: {
           type: "object",
           properties: {
@@ -995,7 +1435,7 @@ Intent mapping examples (use these to choose analytics metric and args):
     }
 
     if (!finalText) {
-      finalText = "I couldn’t find enough info to answer that. Try being more specific (e.g., ‘inactive for 30 days’, ‘customers created in July 2024’, or ‘prospects named Alex’).";
+      finalText = "I couldn't find enough info to answer that. Try being more specific (e.g., 'pipeline overview', 'intro offer clients', 'at-risk analysis', or 'prospects named Alex').";
     }
 
     return new Response(JSON.stringify({ text: finalText }), {
